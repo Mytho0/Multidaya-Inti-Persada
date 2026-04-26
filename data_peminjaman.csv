@@ -1,4 +1,4 @@
-id_sewa,nama_barang,jenis,tanggal_sewa,durasi_sewa,hari,bulan,stok_saat_itu,total_biaya
+id_sewa,nama_barang,jenis,tanggal_sewa,durasi_sewa,hari,bulan,stok,total_biaya
 MIP-00001,Screen 2x3,Screen,2024-01-26,6,Friday,1,13,1755000
 MIP-00002,TV 43 Inch,TV,2024-08-16,2,Friday,8,8,654000
 MIP-00003,Screen 2x3,Screen,2025-08-27,4,Wednesday,8,6,1256000
