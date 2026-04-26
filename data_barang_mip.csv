@@ -1,0 +1,9 @@
+id_barang,nama_barang,jenis,harga_sewa,stok,disewa,tersedia
+1,Epson 6000 Lumens,Proyektor,1000000,15,5,10
+2,Screen 2x3,Screen,300000,20,9,11
+3,Screen 3x4,Screen,400000,15,8,7
+4,TV Panasonic/LG 43 Inch,TV,300000,25,2,23
+5,TV Panasonic/LG 50 Inch,TV,450000,20,2,18
+6,TV Panasonic/LG 55 Inch,TV,550000,15,13,2
+7,TV Panasonic/LG 65 Inch,TV,700000,10,2,8
+8,TV Panasonic/LG 75 Inch,TV,1200000,8,4,4
