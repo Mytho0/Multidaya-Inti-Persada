@@ -1,59 +1,324 @@
-<p align="center"><a href="https://laravel.com" target="_blank"><img src="https://raw.githubusercontent.com/laravel/art/master/logo-lockup/5%20SVG/2%20CMYK/1%20Full%20Color/laravel-logolockup-cmyk-red.svg" width="400" alt="Laravel Logo"></a></p>
+# Multidaya Inti Persada - Sistem Manajemen Persewaan Barang
 
-<p align="center">
-<a href="https://github.com/laravel/framework/actions"><img src="https://github.com/laravel/framework/workflows/tests/badge.svg" alt="Build Status"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/dt/laravel/framework" alt="Total Downloads"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/v/laravel/framework" alt="Latest Stable Version"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/l/laravel/framework" alt="License"></a>
-</p>
+## 📋 Tentang Project
 
-## About Laravel
+**Multidaya Inti Persada** adalah sebuah aplikasi web manajemen persewaan barang berbasis Laravel yang dirancang untuk membantu perusahaan dalam mengelola proses peminjaman barang, inventaris, keuangan, dan pelanggan secara terintegrasi. Aplikasi ini dilengkapi dengan fitur notifikasi WhatsApp, laporan keuangan, serta sistem rekomendasi pintar.
 
-Laravel is a web application framework with expressive, elegant syntax. We believe development must be an enjoyable and creative experience to be truly fulfilling. Laravel takes the pain out of development by easing common tasks used in many web projects, such as:
+## ✨ Fitur Utama
 
-- [Simple, fast routing engine](https://laravel.com/docs/routing).
-- [Powerful dependency injection container](https://laravel.com/docs/container).
-- Multiple back-ends for [session](https://laravel.com/docs/session) and [cache](https://laravel.com/docs/cache) storage.
-- Expressive, intuitive [database ORM](https://laravel.com/docs/eloquent).
-- Database agnostic [schema migrations](https://laravel.com/docs/migrations).
-- [Robust background job processing](https://laravel.com/docs/queues).
-- [Real-time event broadcasting](https://laravel.com/docs/broadcasting).
+### 1. Manajemen Peminjaman
+- ✅ Tambah, edit, hapus peminjaman
+- ✅ Tracking status peminjaman (Aktif/Selesai/Terlambat)
+- ✅ Filter berdasarkan status dan tipe pelanggan
+- ✅ Cek pelanggan berdasarkan nama/telepon dengan autocomplete
+- ✅ Form pengembalian dengan upload foto dan perhitungan denda
+- ✅ Generate invoice PDF
+- ✅ Notifikasi WhatsApp pengiriman & pengingat pengembalian
 
-Laravel is accessible, powerful, and provides tools required for large, robust applications.
+### 2. Manajemen Barang
+- ✅ CRUD barang (Tambah, Edit, Hapus)
+- ✅ Upload gambar barang (drag & drop)
+- ✅ Tracking stok (Stok, Tersedia, Disewa)
+- ✅ Filter berdasarkan jenis barang
+- ✅ Sorting berdasarkan nama, harga, stok
+- ✅ Statistik barang real-time
 
-## Learning Laravel
+### 3. Manajemen Keuangan
+- ✅ Dashboard keuangan dengan grafik
+- ✅ Pendapatan dari peminjaman
+- ✅ Pengeluaran operasional (tambah manual)
+- ✅ Laporan Laba Rugi (Profit & Loss)
+- ✅ Filter berdasarkan periode (bulan/tahun)
+- ✅ Cetak laporan
 
-Laravel has the most extensive and thorough [documentation](https://laravel.com/docs) and video tutorial library of all modern web application frameworks, making it a breeze to get started with the framework. You can also check out [Laravel Learn](https://laravel.com/learn), where you will be guided through building a modern Laravel application.
+### 4. Dashboard & Rekomendasi
+- ✅ Statistik real-time
+- ✅ Grafik pendapatan & pengeluaran
+- ✅ Top produk terlaris
+- ✅ Rekomendasi pintar (tambah barang/promo)
+- ✅ Notifikasi WhatsApp ke admin
 
-If you don't feel like reading, [Laracasts](https://laracasts.com) can help. Laracasts contains thousands of video tutorials on a range of topics including Laravel, modern PHP, unit testing, and JavaScript. Boost your skills by digging into our comprehensive video library.
+### 5. Manajemen Pelanggan
+- ✅ Auto-create pelanggan baru berdasarkan no telepon
+- ✅ Riwayat peminjaman per pelanggan
+- ✅ Total transaksi dan nilai pelanggan
+- ✅ Filter pelanggan baru/lama
 
-## Laravel Sponsors
+## 🛠 Teknologi yang Digunakan
 
-We would like to extend our thanks to the following sponsors for funding Laravel development. If you are interested in becoming a sponsor, please visit the [Laravel Partners program](https://partners.laravel.com).
+| Teknologi | Versi | Keterangan |
+|-----------|-------|-------------|
+| Laravel | 12.53.0 | Framework PHP |
+| PHP | 8.3.10 | Bahasa pemrograman |
+| MySQL | 8.0+ | Database |
+| Tailwind CSS | 3.x | Framework CSS |
+| Font Awesome | 6.0 | Icon library |
+| Chart.js | 3.x | Library grafik |
+| DomPDF | 2.x | Generate PDF invoice |
+| WhatsApp API | Fonnte/Wablas | Notifikasi WhatsApp |
 
-### Premium Partners
+## 📁 Struktur Database
 
-- **[Vehikl](https://vehikl.com)**
-- **[Tighten Co.](https://tighten.co)**
-- **[Kirschbaum Development Group](https://kirschbaumdevelopment.com)**
-- **[64 Robots](https://64robots.com)**
-- **[Curotec](https://www.curotec.com/services/technologies/laravel)**
-- **[DevSquad](https://devsquad.com/hire-laravel-developers)**
-- **[Redberry](https://redberry.international/laravel-development)**
-- **[Active Logic](https://activelogic.com)**
+### Tabel Utama
+1. **users** - Data pengguna/admin
+2. **pelanggan** - Data pelanggan
+3. **barang** - Data inventaris barang
+4. **peminjaman** - Data transaksi peminjaman
+5. **detail_peminjaman** - Detail barang yang dipinjam
+6. **keuangan** - Data pendapatan & pengeluaran
+7. **notifications** - Data notifikasi
+8. **recommendations** - Data rekomendasi pintar
 
-## Contributing
+### Relasi Database
+```
+pelanggan (1) ----< (M) peminjaman (1) ----< (M) detail_peminjaman (M) ----< (1) barang
+                     |
+                     +---- (1) keuangan
+                     +---- (1) notifications
+```
 
-Thank you for considering contributing to the Laravel framework! The contribution guide can be found in the [Laravel documentation](https://laravel.com/docs/contributions).
+## 🚀 Panduan Instalasi
 
-## Code of Conduct
+### Prasyarat
+- PHP >= 8.1
+- Composer
+- MySQL
+- Node.js & NPM (optional)
 
-In order to ensure that the Laravel community is welcoming to all, please review and abide by the [Code of Conduct](https://laravel.com/docs/contributions#code-of-conduct).
+### Langkah Instalasi
 
-## Security Vulnerabilities
+1. **Clone repository**
+```bash
+git clone https://github.com/your-repo/multidaya-inti-persada.git
+cd multidaya-inti-persada
+```
 
-If you discover a security vulnerability within Laravel, please send an e-mail to Taylor Otwell via [taylor@laravel.com](mailto:taylor@laravel.com). All security vulnerabilities will be promptly addressed.
+2. **Install dependencies**
+```bash
+composer install
+npm install  # optional, jika menggunakan Vite
+```
 
-## License
+3. **Konfigurasi Environment**
+```bash
+cp .env.example .env
+```
 
-The Laravel framework is open-sourced software licensed under the [MIT license](https://opensource.org/licenses/MIT).
+Edit file `.env`:
+```env
+DB_CONNECTION=mysql
+DB_HOST=127.0.0.1
+DB_PORT=3306
+DB_DATABASE=laravel
+DB_USERNAME=root
+DB_PASSWORD=
+
+# WhatsApp API Configuration
+WHATSAPP_API_URL=https://api.fonnte.com/send
+WHATSAPP_API_KEY=your_api_key_here
+```
+
+4. **Generate key**
+```bash
+php artisan key:generate
+```
+
+5. **Jalankan migration & seeder**
+```bash
+php artisan migrate
+php artisan db:seed --class=UserSeeder
+php artisan db:seed --class=BarangSeeder
+php artisan db:seed --class=PeminjamanSeeder
+php artisan db:seed --class=KeuanganSeeder
+```
+
+6. **Buat storage link (untuk upload gambar)**
+```bash
+php artisan storage:link
+```
+
+7. **Jalankan server**
+```bash
+php artisan serve
+```
+
+8. **Akses aplikasi**
+```
+http://localhost:8000
+```
+
+### Default Login
+| Username | Password | Role |
+|----------|----------|------|
+| admin | password123 | Administrator |
+| staff | password123 | Staff |
+| manager | password123 | Manager |
+
+## 📂 Struktur Folder
+
+```
+multidaya-inti-persada/
+├── app/
+│   ├── Http/
+│   │   ├── Controllers/
+│   │   │   ├── Auth/
+│   │   │   │   └── LoginController.php
+│   │   │   ├── BarangController.php
+│   │   │   ├── DashboardController.php
+│   │   │   ├── KeuanganController.php
+│   │   │   └── PeminjamanController.php
+│   │   └── Middleware/
+│   ├── Models/
+│   │   ├── Barang.php
+│   │   ├── DetailPeminjaman.php
+│   │   ├── Keuangan.php
+│   │   ├── Pelanggan.php
+│   │   ├── Peminjaman.php
+│   │   └── User.php
+│   └── Services/
+│       └── WhatsAppService.php
+├── database/
+│   ├── migrations/
+│   └── seeders/
+├── resources/
+│   └── views/
+│       ├── auth/
+│       │   └── login.blade.php
+│       ├── barang/
+│       │   └── index.blade.php
+│       ├── dashboard/
+│       │   └── index.blade.php
+│       ├── keuangan/
+│       │   ├── index.blade.php
+│       │   └── laporan_laba_rugi.blade.php
+│       └── peminjaman/
+│           ├── index.blade.php
+│           └── invoice.blade.php
+├── routes/
+│   └── web.php
+└── public/
+    └── storage/ (symlink)
+```
+
+## 🔧 Fitur & Cara Penggunaan
+
+### 1. Login
+- Buka `http://localhost:8000/login`
+- Masukkan username dan password
+
+### 2. Dashboard
+- Melihat statistik pendapatan, transaksi, dan rekomendasi
+- Grafik pendapatan bulanan
+- Top barang terlaris
+- Riwayat aktivitas terbaru
+
+### 3. Manajemen Barang
+- **Tambah Barang**: Klik "Tambah Barang" → isi form → upload gambar → simpan
+- **Edit Barang**: Klik icon edit pada tabel → ubah data → simpan
+- **Detail Barang**: Klik icon eye untuk melihat detail lengkap
+- **Hapus Barang**: Klik icon trash → konfirmasi
+
+### 4. Manajemen Peminjaman
+- **Tambah Peminjaman**: 
+  1. Klik "Tambah Peminjaman"
+  2. Cek pelanggan (jika sudah ada)
+  3. Isi data penyewa
+  4. Pilih barang dan jumlah
+  5. Simpan → otomatis kirim notifikasi WhatsApp
+
+- **Pengembalian Barang**:
+  1. Klik icon pengembalian
+  2. Upload foto barang kembali
+  3. Pilih kondisi barang
+  4. Input denda jika rusak/terlambat
+  5. Proses pengembalian
+
+- **Generate Invoice**: Klik icon printer untuk download PDF
+
+### 5. Laporan Keuangan
+- **Dashboard Keuangan**: Lihat ringkasan pendapatan & pengeluaran
+- **Tambah Biaya**: Klik "Tambah Biaya Operasional"
+- **Laporan Laba Rugi**: Buka menu "Laporan Laba Rugi"
+- **Filter Periode**: Pilih bulan dan tahun
+- **Cetak Laporan**: Klik "Cetak Laporan"
+
+### 6. Notifikasi WhatsApp
+- **Kirim Notifikasi Pengiriman**: Klik icon WhatsApp pada peminjaman aktif
+- **Kirim Pengingat Pengembalian**: Klik icon bell
+
+## 📊 Laporan & Statistik
+
+| Halaman | Fitur |
+|---------|-------|
+| Dashboard | Grafik pendapatan, top produk, rekomendasi |
+| Keuangan | Pendapatan, pengeluaran, laba bersih |
+| Laporan Laba Rugi | Laporan keuangan lengkap dengan format akuntansi |
+
+## 🔐 Keamanan
+
+- ✅ Authentication dengan session-based
+- ✅ CSRF Protection
+- ✅ XSS Prevention (escape output)
+- ✅ SQL Injection Protection (Eloquent ORM)
+- ✅ Password hashing dengan bcrypt
+
+## 🐛 Troubleshooting
+
+### Error "Class not found"
+```bash
+composer dump-autoload
+```
+
+### Error storage link
+```bash
+php artisan storage:link
+rm public/storage  # jika perlu reset
+```
+
+### Error migration
+```bash
+php artisan migrate:fresh --seed
+```
+
+### Error Vite manifest
+```bash
+npm install
+npm run build
+# atau hapus @vite dari layout
+```
+
+### Error WhatsApp notification
+- Pastikan API key valid
+- Cek koneksi internet
+- Format nomor telepon: 62xxxxxxxxxx
+
+## 🤝 Kontribusi
+
+1. Fork repository
+2. Buat branch baru (`git checkout -b feature/amazing-feature`)
+3. Commit perubahan (`git commit -m 'Add some amazing feature'`)
+4. Push ke branch (`git push origin feature/amazing-feature`)
+5. Buat Pull Request
+
+## 📝 Lisensi
+
+Copyright © 2024 Multidaya Inti Persada. All rights reserved.
+
+## 👨‍💻 Developer
+
+**Multidaya Inti Persada Team**
+- Website: [www.multidaya.com](http://www.multidaya.com)
+- Email: info@multidaya.com
+- WhatsApp: 08123456789
+
+## 🙏 Ucapan Terima Kasih
+
+- Laravel Community
+- Tailwind CSS
+- Font Awesome
+- DomPDF
+- Semua kontributor yang telah membantu
+
+---
+
+**Made with ❤️ by Multidaya Inti Persada Team**
