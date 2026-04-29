@@ -139,13 +139,6 @@ php artisan serve
 http://localhost:8000
 ```
 
-### Default Login
-| Username | Password | Role |
-|----------|----------|------|
-| admin | password123 | Administrator |
-| staff | password123 | Staff |
-| manager | password123 | Manager |
-
 ## 📂 Struktur Folder
 
 ```
