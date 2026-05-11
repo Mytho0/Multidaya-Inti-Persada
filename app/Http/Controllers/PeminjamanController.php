@@ -116,6 +116,13 @@ class PeminjamanController extends Controller
 
         DB::beginTransaction();
         try {
+            // Decode barang dari JSON
+            $barangArray = json_decode($request->barang, true);
+
+            if (!$barangArray || !is_array($barangArray) || count($barangArray) === 0) {
+                throw new \Exception('Data barang tidak valid');
+            }
+
             $pelanggan = null;
             $isNewCustomer = false;
 
@@ -140,7 +147,7 @@ class PeminjamanController extends Controller
             $totalHarga = 0;
             $details = [];
 
-            foreach ($request->barang as $item) {
+            foreach ($barangArray as $item) {
                 $barang = Barang::find($item['id']);
                 if (!$barang) {
                     throw new \Exception('Barang tidak ditemukan');
@@ -168,12 +175,12 @@ class PeminjamanController extends Controller
 
             $grandTotal = $totalHarga - ($request->diskon ?? 0);
 
-            // === FITUR BARU: Hitung PPN 11% ===
-            $ppn = 0.11; // 11%
+            // Hitung PPN 11%
+            $ppn = 0.11;
             $totalPpn = $grandTotal * $ppn;
             $grandTotalWithPpn = $grandTotal + $totalPpn;
 
-            // === FITUR BARU: Hitung Jatuh Tempo (tanggal sewa + 7 hari) ===
+            // Hitung Jatuh Tempo (tanggal sewa + 7 hari)
             $jatuhTempo = date('Y-m-d', strtotime($request->tanggal_sewa . ' +7 days'));
 
             $peminjaman = Peminjaman::create([
@@ -193,7 +200,6 @@ class PeminjamanController extends Controller
                 'total_harga' => $totalHarga,
                 'diskon' => $request->diskon ?? 0,
                 'grand_total' => $grandTotal,
-                // === FITUR BARU ===
                 'ppn' => $ppn,
                 'total_ppn' => $totalPpn,
                 'grand_total_with_ppn' => $grandTotalWithPpn,
@@ -201,6 +207,12 @@ class PeminjamanController extends Controller
                 'keterangan' => $request->keterangan,
                 'created_by' => Auth::id()
             ]);
+
+            // Upload bukti pembayaran jika ada
+            if ($request->hasFile('bukti_pembayaran')) {
+                $path = $request->file('bukti_pembayaran')->store('bukti_pembayaran', 'public');
+                $peminjaman->update(['bukti_pembayaran' => $path]);
+            }
 
             $pelanggan->increment('total_transaksi');
             $pelanggan->increment('total_nilai_transaksi', $grandTotalWithPpn);
@@ -212,6 +224,7 @@ class PeminjamanController extends Controller
 
             DB::commit();
 
+            // Kirim notifikasi WhatsApp
             try {
                 $this->whatsappService->sendPengirimanNotification($peminjaman);
                 $peminjaman->update(['whatsapp_sent_pengiriman' => true]);
@@ -469,12 +482,12 @@ class PeminjamanController extends Controller
 
             $grandTotal = $totalHarga - ($request->diskon ?? 0);
 
-            // === FITUR BARU: Hitung PPN 11% ===
-            $ppn = 0.11; // 11%
+            // Hitung PPN 11%
+            $ppn = 0.11;
             $totalPpn = $grandTotal * $ppn;
             $grandTotalWithPpn = $grandTotal + $totalPpn;
 
-            // === FITUR BARU: Hitung Jatuh Tempo (tanggal sewa + 7 hari) ===
+            // Hitung Jatuh Tempo
             $jatuhTempo = date('Y-m-d', strtotime($request->tanggal_sewa . ' +7 days'));
 
             $peminjaman->update([
@@ -491,7 +504,6 @@ class PeminjamanController extends Controller
                 'total_harga' => $totalHarga,
                 'diskon' => $request->diskon ?? 0,
                 'grand_total' => $grandTotal,
-                // === FITUR BARU ===
                 'ppn' => $ppn,
                 'total_ppn' => $totalPpn,
                 'grand_total_with_ppn' => $grandTotalWithPpn,
