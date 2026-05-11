@@ -57,15 +57,10 @@ Route::middleware(['auth'])->group(function () {
         Route::post('/{id}/send-pengiriman', [PeminjamanController::class, 'sendPengirimanNotification'])->name('send-pengiriman');
         Route::post('/{id}/send-pengingat', [PeminjamanController::class, 'sendPengingatPengembalian'])->name('send-pengingat');
 
-        // Customer Check Routes (CEK PELANGGAN) - Letakkan di DALAM group
+        // Customer Check Routes
         Route::post('/cek-pelanggan', [PeminjamanController::class, 'cekPelanggan'])->name('cek-pelanggan');
         Route::get('/pelanggan-list', [PeminjamanController::class, 'getPelangganList'])->name('pelanggan-list');
     });
-
-    // ==================== API ROUTES UNTUK CEK PELANGGAN (DI LUAR GROUP) ====================
-    // Atau pakai prefix api
-    Route::get('/api/pelanggan/list', [PeminjamanController::class, 'getPelangganList'])->name('api.pelanggan.list');
-    Route::post('/api/pelanggan/cek', [PeminjamanController::class, 'cekPelanggan'])->name('api.pelanggan.cek');
 
     // ==================== BARANG ROUTES ====================
     Route::prefix('barang')->name('barang.')->group(function () {
@@ -80,7 +75,6 @@ Route::middleware(['auth'])->group(function () {
     });
 
     // ==================== KEUANGAN ROUTES ====================
-
     Route::prefix('keuangan')->name('keuangan.')->group(function () {
         Route::get('/', [KeuanganController::class, 'index'])->name('index');
         Route::post('/', [KeuanganController::class, 'store'])->name('store');
@@ -100,22 +94,41 @@ Route::middleware(['auth'])->group(function () {
         );
     })->name('api.barang.tersedia');
 
-    // ==================== DASHBOARD NOTIFICATIONS & RECOMMENDATIONS ====================
-    Route::post('/send-whatsapp', [DashboardController::class, 'sendWhatsAppNotification'])->name('send-whatsapp');
-    Route::get('/notifications', [DashboardController::class, 'getNotifications'])->name('notifications');
-    Route::post('/notifications/{id}/read', [DashboardController::class, 'markNotificationRead'])->name('notifications.read');
-    Route::post('/notifications/mark-all-read', [DashboardController::class, 'markAllRead'])->name('notifications.mark-all-read');
-    Route::get('/notifications/count', [DashboardController::class, 'getNotificationCount'])->name('notifications.count');
-    Route::get('/recommendations', [DashboardController::class, 'getRecommendations'])->name('recommendations');
-    Route::post('/recommendations/accept', [DashboardController::class, 'acceptRecommendation'])->name('recommendations.accept');
-    Route::get('/recommendations/refresh', [DashboardController::class, 'refreshRecommendations'])->name('recommendations.refresh');
-
-    // ==================== DASHBOARD API ROUTES (untuk rekomendasi AI) ====================
+    // ==================== DASHBOARD ROUTES (Semua dalam 1 group) ====================
     Route::prefix('dashboard')->name('dashboard.')->group(function () {
-        Route::get('/recommendations/list', [DashboardController::class, 'getRecommendationsList'])->name('recommendations.list');
-        Route::post('/recommendations/apply', [DashboardController::class, 'applyRecommendation'])->name('recommendations.apply');
-        Route::get('/recommendations/random', [DashboardController::class, 'getRandomRecommendation'])->name('recommendations.random');
-        Route::post('/recommendations/refresh', [DashboardController::class, 'refreshRecommendations'])->name('recommendations.refresh');
+
+        // Notifications
+        Route::prefix('notifications')->name('notifications.')->group(function () {
+            Route::get('/', [DashboardController::class, 'getNotifications'])->name('index');
+            Route::get('/count', [DashboardController::class, 'getNotificationCount'])->name('count');
+            Route::post('/{id}/read', [DashboardController::class, 'markNotificationRead'])->name('read');
+            Route::post('/mark-all-read', [DashboardController::class, 'markAllRead'])->name('mark-all-read');
+        });
+
+        // WhatsApp
+        Route::post('/send-whatsapp', [DashboardController::class, 'sendWhatsAppNotification'])->name('send-whatsapp');
+
+        // Recommendations (AI)
+        Route::prefix('recommendations')->name('recommendations.')->group(function () {
+            Route::get('/', [DashboardController::class, 'getRecommendations'])->name('index');
+            Route::get('/list', [DashboardController::class, 'getRecommendationsList'])->name('list');
+            Route::get('/random', [DashboardController::class, 'getRandomRecommendation'])->name('random');
+            Route::post('/accept', [DashboardController::class, 'acceptRecommendation'])->name('accept');
+            Route::post('/apply', [DashboardController::class, 'applyRecommendation'])->name('apply');
+            Route::get('/refresh', [DashboardController::class, 'refreshRecommendations'])->name('refresh');
+        });
+
+        // Calendar Events (dari PeminjamanController)
+        Route::get('/calendar-events', [PeminjamanController::class, 'getCalendarEvents'])->name('calendar-events');
+
+        // Reminders (dari PeminjamanController)
+        Route::get('/reminders', [PeminjamanController::class, 'getReminders'])->name('reminders');
+
+        // Statistics
         Route::get('/stats', [DashboardController::class, 'getDashboardStats'])->name('stats');
+        Route::get('/peminjaman-stats', [PeminjamanController::class, 'getDashboardStats'])->name('peminjaman-stats');
+
+        // AI Optimization
+        Route::get('/ai-optimization/{id}', [DashboardController::class, 'getAiOptimization'])->name('ai-optimization');
     });
 });

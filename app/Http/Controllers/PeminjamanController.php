@@ -12,6 +12,7 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Barryvdh\DomPDF\Facade\Pdf;
+use Carbon\Carbon;
 
 class PeminjamanController extends Controller
 {
@@ -117,7 +118,7 @@ class PeminjamanController extends Controller
         try {
             // Decode barang dari JSON
             $barangArray = json_decode($request->barang, true);
-            
+
             if (!$barangArray || !is_array($barangArray) || count($barangArray) === 0) {
                 throw new \Exception('Data barang tidak valid');
             }
@@ -173,12 +174,12 @@ class PeminjamanController extends Controller
             }
 
             $grandTotal = $totalHarga - ($request->diskon ?? 0);
-            
+
             // Hitung PPN 11%
             $ppn = 0.11;
             $totalPpn = $grandTotal * $ppn;
             $grandTotalWithPpn = $grandTotal + $totalPpn;
-            
+
             // Hitung Jatuh Tempo (tanggal sewa + 7 hari)
             $jatuhTempo = date('Y-m-d', strtotime($request->tanggal_sewa . ' +7 days'));
 
@@ -257,7 +258,7 @@ class PeminjamanController extends Controller
         $data = $peminjaman->toArray();
         $data['tanggal_sewa'] = date('Y-m-d', strtotime($peminjaman->tanggal_sewa));
         $data['tanggal_kembali'] = date('Y-m-d', strtotime($peminjaman->tanggal_kembali));
-        
+
         // Pastikan field baru tersedia
         $data['ppn'] = $peminjaman->ppn ?? 0.11;
         $data['total_ppn'] = $peminjaman->total_ppn ?? 0;
@@ -272,6 +273,7 @@ class PeminjamanController extends Controller
 
     /**
      * Process pengembalian barang.
+     * FIXED: Menghapus kolom 'kerusakan' yang tidak ada di database
      */
     public function pengembalian(Request $request, string $id)
     {
@@ -280,7 +282,6 @@ class PeminjamanController extends Controller
         $request->validate([
             'foto_pengembalian' => 'nullable|image|mimes:jpg,jpeg,png|max:2048',
             'kondisi_barang' => 'required|in:baik,kurang_baik,rusak',
-            'kerusakan' => 'nullable|string',
             'biaya_kerusakan' => 'nullable|numeric|min:0',
             'catatan_pengembalian' => 'nullable|string'
         ]);
@@ -297,7 +298,6 @@ class PeminjamanController extends Controller
                 'status_pengembalian' => 'selesai',
                 'tanggal_pengembalian_real' => now(),
                 'kondisi_barang' => $request->kondisi_barang,
-                'kerusakan' => $request->kerusakan,
                 'biaya_kerusakan' => $request->biaya_kerusakan ?? 0,
                 'denda' => $totalDenda,
                 'catatan_pengembalian' => $request->catatan_pengembalian
@@ -480,12 +480,12 @@ class PeminjamanController extends Controller
             }
 
             $grandTotal = $totalHarga - ($request->diskon ?? 0);
-            
+
             // Hitung PPN 11%
             $ppn = 0.11;
             $totalPpn = $grandTotal * $ppn;
             $grandTotalWithPpn = $grandTotal + $totalPpn;
-            
+
             // Hitung Jatuh Tempo
             $jatuhTempo = date('Y-m-d', strtotime($request->tanggal_sewa . ' +7 days'));
 
@@ -680,5 +680,220 @@ class PeminjamanController extends Controller
                 'message' => 'Gagal menghapus: ' . $e->getMessage()
             ], 500);
         }
+    }
+
+    // ==================== METHODS UNTUK DASHBOARD ====================
+
+    /**
+     * Get calendar events for dashboard
+     */
+    public function getCalendarEvents()
+    {
+        $events = [];
+        $peminjaman = Peminjaman::with('details')->get();
+
+        foreach ($peminjaman as $rental) {
+            // Rental start event
+            if ($rental->tanggal_sewa) {
+                $events[] = [
+                    'date' => Carbon::parse($rental->tanggal_sewa)->format('Y-m-d'),
+                    'title' => 'Sewa: ' . ($rental->invoice_number ?? 'Rental-' . $rental->id),
+                    'type' => 'rental_start',
+                    'customer' => $rental->nama_penyewa,
+                    'invoice' => $rental->invoice_number,
+                    'color' => 'green'
+                ];
+            }
+
+            // Due date event (tanggal_kembali)
+            if ($rental->tanggal_kembali) {
+                $events[] = [
+                    'date' => Carbon::parse($rental->tanggal_kembali)->format('Y-m-d'),
+                    'title' => 'Jatuh Tempo: ' . ($rental->invoice_number ?? 'Rental-' . $rental->id),
+                    'type' => 'due_date',
+                    'customer' => $rental->nama_penyewa,
+                    'invoice' => $rental->invoice_number,
+                    'color' => 'orange'
+                ];
+            }
+
+            // Actual return date event
+            if ($rental->tanggal_pengembalian_real) {
+                $events[] = [
+                    'date' => Carbon::parse($rental->tanggal_pengembalian_real)->format('Y-m-d'),
+                    'title' => 'Dikembalikan: ' . ($rental->invoice_number ?? 'Rental-' . $rental->id),
+                    'type' => 'returned',
+                    'customer' => $rental->nama_penyewa,
+                    'invoice' => $rental->invoice_number,
+                    'color' => 'blue'
+                ];
+            }
+
+            // Payment due date
+            if ($rental->jatuh_tempo_pembayaran && $rental->status_pembayaran != 'lunas') {
+                $events[] = [
+                    'date' => Carbon::parse($rental->jatuh_tempo_pembayaran)->format('Y-m-d'),
+                    'title' => 'Pembayaran: ' . ($rental->invoice_number ?? 'Rental-' . $rental->id),
+                    'type' => 'payment_due',
+                    'customer' => $rental->nama_penyewa,
+                    'invoice' => $rental->invoice_number,
+                    'color' => 'red'
+                ];
+            }
+        }
+
+        // Sort events by date
+        usort($events, function ($a, $b) {
+            return strcmp($a['date'], $b['date']);
+        });
+
+        return response()->json([
+            'success' => true,
+            'data' => $events
+        ]);
+    }
+
+    /**
+     * Get reminders for dashboard (overdue returns and payment due)
+     */
+    public function getReminders()
+    {
+        $reminders = [];
+        $today = Carbon::today();
+
+        // Overdue returns (tanggal_kembali < today and status masih aktif)
+        $overdueReturns = Peminjaman::where('status_pengembalian', 'aktif')
+            ->whereDate('tanggal_kembali', '<', $today)
+            ->get();
+
+        foreach ($overdueReturns as $rental) {
+            $dueDate = Carbon::parse($rental->tanggal_kembali);
+            $daysOverdue = $dueDate->diffInDays($today);
+
+            $reminders[] = [
+                'id' => $rental->id,
+                'title' => 'Pengembalian Terlambat',
+                'description' => $rental->invoice_number . ' - ' . $rental->nama_penyewa .
+                    ' terlambat ' . $daysOverdue . ' hari',
+                'due_date' => $dueDate->format('d/m/Y'),
+                'is_overdue' => true,
+                'type' => 'return_overdue',
+                'invoice' => $rental->invoice_number,
+                'customer' => $rental->nama_penyewa
+            ];
+        }
+
+        // Due today returns
+        $dueToday = Peminjaman::where('status_pengembalian', 'aktif')
+            ->whereDate('tanggal_kembali', '=', $today)
+            ->get();
+
+        foreach ($dueToday as $rental) {
+            $reminders[] = [
+                'id' => $rental->id,
+                'title' => 'Jatuh Tempo Hari Ini',
+                'description' => $rental->invoice_number . ' - ' . $rental->nama_penyewa .
+                    ' harus dikembalikan hari ini',
+                'due_date' => Carbon::parse($rental->tanggal_kembali)->format('d/m/Y'),
+                'is_overdue' => false,
+                'type' => 'return_due',
+                'invoice' => $rental->invoice_number,
+                'customer' => $rental->nama_penyewa
+            ];
+        }
+
+        // Payment overdue
+        $paymentOverdue = Peminjaman::where('status_pembayaran', '!=', 'lunas')
+            ->where('status_pembayaran', '!=', 'paid')
+            ->whereDate('jatuh_tempo_pembayaran', '<', $today)
+            ->get();
+
+        foreach ($paymentOverdue as $rental) {
+            $dueDate = Carbon::parse($rental->jatuh_tempo_pembayaran);
+            $daysOverdue = $dueDate->diffInDays($today);
+
+            $reminders[] = [
+                'id' => $rental->id,
+                'title' => 'Pembayaran Terlambat',
+                'description' => $rental->invoice_number . ' - ' . $rental->nama_penyewa .
+                    ' pembayaran terlambat ' . $daysOverdue . ' hari',
+                'due_date' => $dueDate->format('d/m/Y'),
+                'is_overdue' => true,
+                'type' => 'payment_overdue',
+                'invoice' => $rental->invoice_number,
+                'customer' => $rental->nama_penyewa
+            ];
+        }
+
+        // Payment due today
+        $paymentDueToday = Peminjaman::where('status_pembayaran', '!=', 'lunas')
+            ->where('status_pembayaran', '!=', 'paid')
+            ->whereDate('jatuh_tempo_pembayaran', '=', $today)
+            ->get();
+
+        foreach ($paymentDueToday as $rental) {
+            $reminders[] = [
+                'id' => $rental->id,
+                'title' => 'Pembayaran Jatuh Tempo',
+                'description' => $rental->invoice_number . ' - ' . $rental->nama_penyewa .
+                    ' pembayaran jatuh tempo hari ini',
+                'due_date' => Carbon::parse($rental->jatuh_tempo_pembayaran)->format('d/m/Y'),
+                'is_overdue' => false,
+                'type' => 'payment_due',
+                'invoice' => $rental->invoice_number,
+                'customer' => $rental->nama_penyewa
+            ];
+        }
+
+        // Sort: overdue first, then by date
+        usort($reminders, function ($a, $b) {
+            if ($a['is_overdue'] != $b['is_overdue']) {
+                return $b['is_overdue'] - $a['is_overdue'];
+            }
+            return strcmp($a['due_date'], $b['due_date']);
+        });
+
+        return response()->json([
+            'success' => true,
+            'data' => array_slice($reminders, 0, 10)
+        ]);
+    }
+
+    /**
+     * Get dashboard statistics for API
+     */
+    public function getDashboardStats()
+    {
+        $currentMonth = Carbon::now()->month;
+        $currentYear = Carbon::now()->year;
+
+        // Pendapatan bulan ini
+        $pendapatanBulanIni = Peminjaman::where('status_pengembalian', 'selesai')
+            ->whereMonth('tanggal_pengembalian_real', $currentMonth)
+            ->whereYear('tanggal_pengembalian_real', $currentYear)
+            ->sum('grand_total_with_ppn');
+
+        // Sewa aktif
+        $sewaAktif = Peminjaman::where('status_pengembalian', 'aktif')->count();
+
+        // Pendapatan hari ini
+        $pendapatanHariIni = Peminjaman::where('status_pengembalian', 'selesai')
+            ->whereDate('tanggal_pengembalian_real', Carbon::today())
+            ->sum('grand_total_with_ppn');
+
+        // Jumlah transaksi bulan ini
+        $totalTransaksi = Peminjaman::whereMonth('created_at', $currentMonth)
+            ->whereYear('created_at', $currentYear)
+            ->count();
+
+        return response()->json([
+            'success' => true,
+            'data' => [
+                'pendapatan_bulan_ini' => $pendapatanBulanIni,
+                'sewa_aktif' => $sewaAktif,
+                'pendapatan_hari_ini' => $pendapatanHariIni,
+                'total_transaksi' => $totalTransaksi
+            ]
+        ]);
     }
 }

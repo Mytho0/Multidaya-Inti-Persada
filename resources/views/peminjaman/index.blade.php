@@ -1005,7 +1005,7 @@
                     <div class="flex flex-col sm:flex-row gap-3 mt-10">
                         <button type="submit"
                             class="flex-2 bg-emerald-600 hover:bg-emerald-700 text-white font-black py-4 rounded-2xl shadow-lg shadow-emerald-200 transition-all transform active:scale-[0.98] flex items-center justify-center gap-2 uppercase tracking-wider">
-                            Konfirmasi Selesai
+                            Konfirmasi
                         </button>
                         <button type="button" onclick="closePengembalianModal()"
                             class="flex-1 bg-slate-100 hover:bg-slate-200 text-slate-600 font-bold py-4 rounded-2xl transition-all flex items-center justify-center uppercase tracking-wider text-xs">
