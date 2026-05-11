@@ -109,4 +109,13 @@ Route::middleware(['auth'])->group(function () {
     Route::get('/recommendations', [DashboardController::class, 'getRecommendations'])->name('recommendations');
     Route::post('/recommendations/accept', [DashboardController::class, 'acceptRecommendation'])->name('recommendations.accept');
     Route::get('/recommendations/refresh', [DashboardController::class, 'refreshRecommendations'])->name('recommendations.refresh');
+
+    // ==================== DASHBOARD API ROUTES (untuk rekomendasi AI) ====================
+    Route::prefix('dashboard')->name('dashboard.')->group(function () {
+        Route::get('/recommendations/list', [DashboardController::class, 'getRecommendationsList'])->name('recommendations.list');
+        Route::post('/recommendations/apply', [DashboardController::class, 'applyRecommendation'])->name('recommendations.apply');
+        Route::get('/recommendations/random', [DashboardController::class, 'getRandomRecommendation'])->name('recommendations.random');
+        Route::post('/recommendations/refresh', [DashboardController::class, 'refreshRecommendations'])->name('recommendations.refresh');
+        Route::get('/stats', [DashboardController::class, 'getDashboardStats'])->name('stats');
+    });
 });
