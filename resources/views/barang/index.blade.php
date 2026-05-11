@@ -4,6 +4,7 @@
 @section('page-title', 'Manajemen Barang')
 @section('barang-active', 'bg-gray-100 text-gray-800 shadow-sm')
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
 @section('main-content')
     <div class="px-4 sm:px-6 lg:px-8 py-4 sm:py-6 max-w-7xl mx-auto">
 
