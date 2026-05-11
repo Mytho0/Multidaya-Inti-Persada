@@ -109,16 +109,15 @@ class PeminjamanController extends Controller
             'tanggal_kembali' => 'required|date|after_or_equal:tanggal_sewa',
             'waktu_sewa' => 'required',
             'waktu_kembali' => 'required',
-            'barang' => 'required|array|min:1',
-            'barang.*.id' => 'required|exists:barang,id',
-            'barang.*.jumlah' => 'required|integer|min:1'
+            'barang' => 'required|string',
+            'bukti_pembayaran' => 'nullable|image|mimes:jpg,jpeg,png|max:2048'
         ]);
 
         DB::beginTransaction();
         try {
             // Decode barang dari JSON
             $barangArray = json_decode($request->barang, true);
-
+            
             if (!$barangArray || !is_array($barangArray) || count($barangArray) === 0) {
                 throw new \Exception('Data barang tidak valid');
             }
@@ -174,12 +173,12 @@ class PeminjamanController extends Controller
             }
 
             $grandTotal = $totalHarga - ($request->diskon ?? 0);
-
+            
             // Hitung PPN 11%
             $ppn = 0.11;
             $totalPpn = $grandTotal * $ppn;
             $grandTotalWithPpn = $grandTotal + $totalPpn;
-
+            
             // Hitung Jatuh Tempo (tanggal sewa + 7 hari)
             $jatuhTempo = date('Y-m-d', strtotime($request->tanggal_sewa . ' +7 days'));
 
@@ -258,7 +257,7 @@ class PeminjamanController extends Controller
         $data = $peminjaman->toArray();
         $data['tanggal_sewa'] = date('Y-m-d', strtotime($peminjaman->tanggal_sewa));
         $data['tanggal_kembali'] = date('Y-m-d', strtotime($peminjaman->tanggal_kembali));
-
+        
         // Pastikan field baru tersedia
         $data['ppn'] = $peminjaman->ppn ?? 0.11;
         $data['total_ppn'] = $peminjaman->total_ppn ?? 0;
@@ -481,12 +480,12 @@ class PeminjamanController extends Controller
             }
 
             $grandTotal = $totalHarga - ($request->diskon ?? 0);
-
+            
             // Hitung PPN 11%
             $ppn = 0.11;
             $totalPpn = $grandTotal * $ppn;
             $grandTotalWithPpn = $grandTotal + $totalPpn;
-
+            
             // Hitung Jatuh Tempo
             $jatuhTempo = date('Y-m-d', strtotime($request->tanggal_sewa . ' +7 days'));
 
