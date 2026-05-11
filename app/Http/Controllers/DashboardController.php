@@ -1,11 +1,12 @@
 <?php
 
-
 namespace App\Http\Controllers;
+
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Auth;
 use App\Models\Peminjaman;
 use App\Models\Barang;
 use App\Models\DetailPeminjaman;
@@ -13,40 +14,66 @@ use App\Models\Notification;
 use App\Models\Recommendation;
 use Carbon\Carbon;
 
-
 class DashboardController extends Controller
 {
+    /**
+     * Display dashboard page
+     */
     public function index()
     {
         $greeting = $this->getGreeting();
-        $userName = auth()->user()->name ?? 'Admin';
+        $userName = Auth()->user()->name ?? 'Admin';
 
         // ==================== STATISTIK DASHBOARD ====================
-        // Total pendapatan bulan ini
         $currentMonth = Carbon::now()->month;
         $currentYear = Carbon::now()->year;
 
+        // Sewa Aktif (status_pengembalian = 'aktif')
+        $sewaAktif = Peminjaman::where('status_pengembalian', 'aktif')->count();
+
+        // Total pendapatan bulan ini dari transaksi yang sudah selesai
         $pendapatanBulanIni = Peminjaman::where('status_pengembalian', 'selesai')
             ->whereMonth('tanggal_pengembalian_real', $currentMonth)
             ->whereYear('tanggal_pengembalian_real', $currentYear)
-            ->sum('grand_total');
+            ->sum('grand_total_with_ppn');
 
-        $targetBulanIni = 200000000; // Target misal 200 juta
+        // Jika belum ada yang selesai, ambil dari total_harga
+        if ($pendapatanBulanIni == 0) {
+            $pendapatanBulanIni = Peminjaman::whereMonth('tanggal_sewa', $currentMonth)
+                ->whereYear('tanggal_sewa', $currentYear)
+                ->sum('total_harga');
+        }
+
+        // Total pengeluaran bulan ini (biaya operasional)
+        $totalPengeluaran = \App\Models\BiayaOperasional::whereMonth('tanggal', $currentMonth)
+            ->whereYear('tanggal', $currentYear)
+            ->sum('jumlah');
+
+        // Jika tidak ada biaya operasional, gunakan nilai default dari gambar
+        if (!$totalPengeluaran) {
+            $totalPengeluaran = 1850000;
+        }
+
+        $targetBulanIni = 200000000;
         $monthlyTarget = $pendapatanBulanIni > 0 ? ($pendapatanBulanIni / $targetBulanIni) * 100 : 0;
 
-        // Unread messages (notifikasi belum dibaca)
         $unreadMessages = Notification::where('status', 'unread')->count();
 
-        // Revenue growth (perbandingan bulan ini dengan bulan lalu)
         $lastMonth = Carbon::now()->subMonth();
         $pendapatanBulanLalu = Peminjaman::where('status_pengembalian', 'selesai')
             ->whereMonth('tanggal_pengembalian_real', $lastMonth->month)
             ->whereYear('tanggal_pengembalian_real', $lastMonth->year)
-            ->sum('grand_total');
+            ->sum('grand_total_with_ppn');
 
         $revenueGrowth = $pendapatanBulanLalu > 0
             ? (($pendapatanBulanIni - $pendapatanBulanLalu) / $pendapatanBulanLalu) * 100
             : 0;
+
+        // ==================== CALENDAR DATA ====================
+        $calendarEvents = $this->getCalendarEvents();
+
+        // ==================== REMINDERS FROM PEMINJAMAN ====================
+        $reminders = $this->getRemindersFromPeminjaman();
 
         // ==================== AKTIVITAS TERBARU ====================
         $activities = $this->getRecentActivities();
@@ -59,15 +86,12 @@ class DashboardController extends Controller
         $monthlyProgress = $monthlyTarget;
         $monthlyGrowth = $revenueGrowth;
 
-        // Top month berdasarkan historis
         $topMonth = $this->getTopMonth();
         $topYear = $this->getTopYear();
-        $yearlySales = Peminjaman::where('status_pengembalian', 'selesai')
-            ->whereYear('tanggal_pengembalian_real', $currentYear)
-            ->sum('grand_total');
+        $yearlySales = Peminjaman::whereYear('tanggal_sewa', $currentYear)->sum('grand_total_with_ppn');
         $yearlyGrowth = $this->getYearlyGrowth();
 
-        // ==================== REKOMENDASI PINTAR ====================
+        // ==================== REKOMENDASI AI PINTAR ====================
         $recommendations = $this->generateSmartRecommendations();
 
         // ==================== NOTIFIKASI ====================
@@ -76,21 +100,196 @@ class DashboardController extends Controller
             ->limit(5)
             ->get();
 
-        // === Cari 1 barang untuk Optimasi Profit (Contoh: yang stoknya paling banyak/perlu promo) ==
-        $produkProfitAI = Barang::orderBy('stok', 'desc')->first();
+        // === AI Cards ===
+        $produkProfitAI = Barang::orderBy('tersedia', 'desc')->first();
+        $produkStokAI = Barang::orderBy('tersedia', 'asc')->first();
 
-        // === Cari 1 barang untuk Analisis Stok (Contoh: yang stoknya paling sedikit/mau habis) ==
-        $produkStokAI = Barang::orderBy('stok', 'asc')->first();
-
-        // ==================== AI REKOMENDASI ====================
-        $produkAnalisisAI = Barang::orderBy('stok', 'asc')->first();
+        // Data untuk insight AI
+        $threeMonthsAgo = Carbon::now()->subMonths(3);
+        $totalTransaksiAkhir = Peminjaman::where('created_at', '>=', $threeMonthsAgo)->count();
+        $daysCount = max(1, Carbon::now()->diffInDays($threeMonthsAgo));
+        $avgDailyTransaksi = $totalTransaksiAkhir / $daysCount;
 
         return view('dashboard.index', compact(
-            'greeting', 'userName', 'monthlyTarget', 'pendapatanBulanIni',
-            'unreadMessages', 'revenueGrowth', 'activities', 'topProducts',
-            'monthlySales', 'monthlyProgress', 'monthlyGrowth', 'topMonth',
-            'topYear', 'yearlySales', 'yearlyGrowth', 'recommendations', 'notifications', 'produkProfitAI', 'produkStokAI'
+            'greeting',
+            'userName',
+            'monthlyTarget',
+            'pendapatanBulanIni',
+            'totalPengeluaran',
+            'sewaAktif',
+            'unreadMessages',
+            'revenueGrowth',
+            'activities',
+            'topProducts',
+            'monthlySales',
+            'monthlyProgress',
+            'monthlyGrowth',
+            'topMonth',
+            'topYear',
+            'yearlySales',
+            'yearlyGrowth',
+            'recommendations',
+            'notifications',
+            'produkProfitAI',
+            'produkStokAI',
+            'totalTransaksiAkhir',
+            'avgDailyTransaksi',
+            'calendarEvents',
+            'reminders'
         ));
+    }
+
+    /**
+     * Get calendar events from peminjaman data
+     */
+    private function getCalendarEvents()
+    {
+        $events = [];
+
+        // Get all peminjaman
+        $peminjaman = Peminjaman::with('details')->get();
+
+        foreach ($peminjaman as $rental) {
+            // Add rental start event (tanggal_sewa)
+            if ($rental->tanggal_sewa && $rental->tanggal_sewa != '0000-00-00') {
+                $events[] = (object)[
+                    'date' => Carbon::parse($rental->tanggal_sewa)->format('Y-m-d'),
+                    'title' => 'Sewa: ' . ($rental->invoice_number ?? 'Rental-' . $rental->id),
+                    'type' => 'rental_start',
+                    'customer' => $rental->nama_penyewa ?? 'Customer',
+                    'invoice' => $rental->invoice_number,
+                    'color' => 'green'
+                ];
+            }
+
+            // Add expected return date (tanggal_kembali)
+            if ($rental->tanggal_kembali && $rental->tanggal_kembali != '0000-00-00') {
+                $events[] = (object)[
+                    'date' => Carbon::parse($rental->tanggal_kembali)->format('Y-m-d'),
+                    'title' => 'Jatuh Tempo: ' . ($rental->invoice_number ?? 'Rental-' . $rental->id),
+                    'type' => 'due_date',
+                    'customer' => $rental->nama_penyewa ?? 'Customer',
+                    'invoice' => $rental->invoice_number,
+                    'color' => 'orange'
+                ];
+            }
+
+            // Add actual return date (tanggal_pengembalian_real)
+            if ($rental->tanggal_pengembalian_real && $rental->tanggal_pengembalian_real != '0000-00-00') {
+                $events[] = (object)[
+                    'date' => Carbon::parse($rental->tanggal_pengembalian_real)->format('Y-m-d'),
+                    'title' => 'Dikembalikan: ' . ($rental->invoice_number ?? 'Rental-' . $rental->id),
+                    'type' => 'returned',
+                    'customer' => $rental->nama_penyewa ?? 'Customer',
+                    'invoice' => $rental->invoice_number,
+                    'color' => 'blue'
+                ];
+            }
+
+            // Add payment due date (jatuh_tempo_pembayaran) if not paid
+            if (
+                $rental->jatuh_tempo_pembayaran &&
+                $rental->jatuh_tempo_pembayaran != '0000-00-00' &&
+                $rental->status_pembayaran != 'lunas'
+            ) {
+                $events[] = (object)[
+                    'date' => Carbon::parse($rental->jatuh_tempo_pembayaran)->format('Y-m-d'),
+                    'title' => 'Pembayaran: ' . ($rental->invoice_number ?? 'Rental-' . $rental->id),
+                    'type' => 'payment_due',
+                    'customer' => $rental->nama_penyewa ?? 'Customer',
+                    'invoice' => $rental->invoice_number,
+                    'color' => 'red'
+                ];
+            }
+        }
+
+        // Sort events by date
+        usort($events, function ($a, $b) {
+            return strcmp($a->date, $b->date);
+        });
+
+        return $events;
+    }
+
+    /**
+     * Get reminders from peminjaman data
+     */
+    private function getRemindersFromPeminjaman()
+    {
+        $reminders = [];
+        $today = Carbon::today();
+
+        // Get rentals that are due today or overdue (using tanggal_kembali)
+        $dueRentals = Peminjaman::where('status_pengembalian', 'aktif')
+            ->whereDate('tanggal_kembali', '<=', $today)
+            ->get();
+
+        foreach ($dueRentals as $rental) {
+            $dueDate = Carbon::parse($rental->tanggal_kembali);
+            $isOverdue = $dueDate->isPast();
+
+            $reminders[] = (object)[
+                'id' => $rental->id,
+                'title' => 'Pengembalian ' . ($isOverdue ? 'Terlambat' : 'Hari Ini'),
+                'description' => ($rental->invoice_number ?? 'INV-' . $rental->id) . ' - ' . ($rental->nama_penyewa ?? 'Customer') .
+                    ($isOverdue ? ' sudah melewati jatuh tempo (' . $dueDate->format('d/m/Y') . ')' : ' harus dikembalikan hari ini'),
+                'due_date' => $dueDate->format('d/m/Y'),
+                'is_overdue' => $isOverdue,
+                'invoice' => $rental->invoice_number,
+                'customer' => $rental->nama_penyewa,
+                'type' => 'return_reminder'
+            ];
+        }
+
+        // Get rentals starting today
+        $startingRentals = Peminjaman::where('status_pengembalian', 'aktif')
+            ->whereDate('tanggal_sewa', $today)
+            ->get();
+
+        foreach ($startingRentals as $rental) {
+            $reminders[] = (object)[
+                'id' => $rental->id,
+                'title' => 'Sewa Mulai Hari Ini',
+                'description' => ($rental->invoice_number ?? 'INV-' . $rental->id) . ' - ' . ($rental->nama_penyewa ?? 'Customer') .
+                    ' mulai menyewa hari ini',
+                'due_date' => Carbon::parse($rental->tanggal_sewa)->format('d/m/Y'),
+                'is_overdue' => false,
+                'invoice' => $rental->invoice_number,
+                'customer' => $rental->nama_penyewa,
+                'type' => 'start_reminder'
+            ];
+        }
+
+        // Get rentals with pending payment
+        $paymentDueRentals = Peminjaman::where('status_pembayaran', '!=', 'lunas')
+            ->where('status_pembayaran', '!=', 'paid')
+            ->whereDate('jatuh_tempo_pembayaran', '<=', $today)
+            ->get();
+
+        foreach ($paymentDueRentals as $rental) {
+            $dueDate = Carbon::parse($rental->jatuh_tempo_pembayaran);
+            $isOverdue = $dueDate->isPast();
+
+            $reminders[] = (object)[
+                'id' => $rental->id,
+                'title' => 'Pembayaran ' . ($isOverdue ? 'Terlambat' : 'Jatuh Tempo'),
+                'description' => ($rental->invoice_number ?? 'INV-' . $rental->id) . ' - ' . ($rental->nama_penyewa ?? 'Customer') .
+                    ($isOverdue ? ' sudah melewati jatuh tempo pembayaran!' : ' jatuh tempo pembayaran hari ini'),
+                'due_date' => $dueDate->format('d/m/Y'),
+                'is_overdue' => $isOverdue,
+                'invoice' => $rental->invoice_number,
+                'customer' => $rental->nama_penyewa,
+                'type' => 'payment_reminder'
+            ];
+        }
+
+        // Sort: overdue first, then by date
+        $reminders = collect($reminders)->sortByDesc(function ($reminder) {
+            return $reminder->is_overdue ? 1 : 0;
+        })->values()->all();
+
+        // Limit to 5 reminders
+        return array_slice($reminders, 0, 5);
     }
 
     private function getGreeting()
@@ -103,7 +302,6 @@ class DashboardController extends Controller
 
     private function getRecentActivities()
     {
-        // Ambil peminjaman terbaru sebagai aktivitas
         $recentPeminjaman = Peminjaman::with('details')
             ->orderBy('created_at', 'desc')
             ->limit(5)
@@ -114,27 +312,27 @@ class DashboardController extends Controller
             $activities[] = (object)[
                 'time' => $peminjaman->created_at->format('H:i'),
                 'type' => $peminjaman->status_pengembalian == 'selesai' ? 'Pengembalian' : 'Peminjaman',
-                'icon' => $peminjaman->status_pengembalian == 'selesai' ? 'fa-undo-alt' : 'fa-exchange-alt',
-                'description' => $peminjaman->invoice_number . ' - ' . ($peminjaman->details->first()->nama_barang ?? 'Barang') . ' oleh ' . $peminjaman->nama_penyewa
+                'description' => ($peminjaman->invoice_number ?? 'INV-' . $peminjaman->id) . ' - ' . ($peminjaman->details->first()->nama_barang ?? 'Barang') . ' oleh ' . ($peminjaman->nama_penyewa ?? 'Customer')
             ];
         }
-
         return $activities;
     }
 
     private function getTopProducts()
     {
-        $topBarang = DetailPeminjaman::select('nama_barang',
+        $topBarang = DetailPeminjaman::select(
+            'nama_barang',
             DB::raw('SUM(jumlah) as total_sewa'),
-            DB::raw('SUM(subtotal) as total_pendapatan'))
+            DB::raw('SUM(subtotal) as total_pendapatan')
+        )
             ->groupBy('nama_barang')
             ->orderBy('total_sewa', 'desc')
             ->limit(5)
             ->get();
 
         $maxTotal = $topBarang->max('total_sewa') ?: 1;
-
         $products = [];
+
         foreach ($topBarang as $index => $item) {
             $products[] = (object)[
                 'name' => $item->nama_barang,
@@ -142,15 +340,16 @@ class DashboardController extends Controller
                 'sales' => $item->total_pendapatan
             ];
         }
-
         return $products;
     }
 
     private function getTopMonth()
     {
         $topMonth = Peminjaman::where('status_pengembalian', 'selesai')
-            ->select(DB::raw('MONTH(tanggal_pengembalian_real) as month'),
-                DB::raw('SUM(grand_total) as total'))
+            ->select(
+                DB::raw('MONTH(tanggal_pengembalian_real) as month'),
+                DB::raw('SUM(grand_total_with_ppn) as total')
+            )
             ->groupBy('month')
             ->orderBy('total', 'desc')
             ->first();
@@ -164,8 +363,10 @@ class DashboardController extends Controller
     private function getTopYear()
     {
         $topYear = Peminjaman::where('status_pengembalian', 'selesai')
-            ->select(DB::raw('YEAR(tanggal_pengembalian_real) as year'),
-                DB::raw('SUM(grand_total) as total'))
+            ->select(
+                DB::raw('YEAR(tanggal_pengembalian_real) as year'),
+                DB::raw('SUM(grand_total_with_ppn) as total')
+            )
             ->groupBy('year')
             ->orderBy('total', 'desc')
             ->first();
@@ -180,11 +381,11 @@ class DashboardController extends Controller
 
         $currentYearTotal = Peminjaman::where('status_pengembalian', 'selesai')
             ->whereYear('tanggal_pengembalian_real', $currentYear)
-            ->sum('grand_total');
+            ->sum('grand_total_with_ppn');
 
         $lastYearTotal = Peminjaman::where('status_pengembalian', 'selesai')
             ->whereYear('tanggal_pengembalian_real', $lastYear)
-            ->sum('grand_total');
+            ->sum('grand_total_with_ppn');
 
         if ($lastYearTotal > 0) {
             return round((($currentYearTotal - $lastYearTotal) / $lastYearTotal) * 100);
@@ -192,136 +393,157 @@ class DashboardController extends Controller
         return 22;
     }
 
-    // ==================== REKOMENDASI AI ====================
+    // ==================== ANALISIS AI ====================
+
+    private function analyzeBestPromoTime()
+    {
+        $threeMonthsAgo = Carbon::now()->subMonths(3);
+
+        $dailyDemand = Peminjaman::where('created_at', '>=', $threeMonthsAgo)
+            ->select(DB::raw('DAYOFWEEK(created_at) as day_of_week'), DB::raw('COUNT(*) as total_transaksi'))
+            ->groupBy('day_of_week')
+            ->get()
+            ->keyBy('day_of_week');
+
+        $dayNames = [
+            1 => 'Minggu',
+            2 => 'Senin',
+            3 => 'Selasa',
+            4 => 'Rabu',
+            5 => 'Kamis',
+            6 => 'Jumat',
+            7 => 'Sabtu'
+        ];
+
+        $recommendations = [];
+
+        if ($dailyDemand->count() > 0) {
+            $minDay = $dailyDemand->sortBy('total_transaksi')->first();
+            $maxDay = $dailyDemand->sortByDesc('total_transaksi')->first();
+
+            if ($minDay && $maxDay && $minDay->total_transaksi < $maxDay->total_transaksi * 0.7) {
+                $recommendations[] = [
+                    'type' => 'promo',
+                    'title' => 'Promo Hari ' . $dayNames[$minDay->day_of_week],
+                    'description' => "Hari {$dayNames[$minDay->day_of_week]} adalah hari dengan permintaan terendah ({$minDay->total_transaksi} transaksi). Berikan promo khusus untuk meningkatkan permintaan.",
+                    'day' => $dayNames[$minDay->day_of_week],
+                    'target_day' => $minDay->day_of_week,
+                    'potential_gain' => round(($maxDay->total_transaksi - $minDay->total_transaksi) / $minDay->total_transaksi * 100),
+                    'score' => 85
+                ];
+            }
+        }
+
+        return $recommendations;
+    }
+
+    private function analyzeStockRecommendation()
+    {
+        $threeMonthsAgo = Carbon::now()->subMonths(3);
+
+        $topDemanded = DetailPeminjaman::select(
+            'barang_id',
+            'nama_barang',
+            DB::raw('SUM(jumlah) as total_demand'),
+            DB::raw('COUNT(DISTINCT peminjaman_id) as unique_customers')
+        )
+            ->where('created_at', '>=', $threeMonthsAgo)
+            ->groupBy('barang_id', 'nama_barang')
+            ->orderBy('total_demand', 'desc')
+            ->limit(5)
+            ->get();
+
+        $lowStockBarang = Barang::where('tersedia', '<', 5)
+            ->where('tersedia', '>', 0)
+            ->orderBy('tersedia', 'asc')
+            ->limit(5)
+            ->get();
+
+        $recommendations = [];
+
+        foreach ($topDemanded as $barang) {
+            $currentStock = Barang::where('id', $barang->barang_id)->value('tersedia') ?? 0;
+
+            if ($currentStock < $barang->total_demand * 0.3) {
+                $recommendations[] = [
+                    'type' => 'barang',
+                    'title' => 'Tambah Stok ' . $barang->nama_barang,
+                    'description' => "Barang ini memiliki permintaan tinggi ({$barang->total_demand} unit) dengan {$barang->unique_customers} pelanggan unik. Stok saat ini ({$currentStock}) tidak mencukupi.",
+                    'barang_id' => $barang->barang_id,
+                    'nama_barang' => $barang->nama_barang,
+                    'recommended_quantity' => ceil($barang->total_demand * 0.5),
+                    'current_stock' => $currentStock,
+                    'priority' => 'high',
+                    'score' => 95
+                ];
+                break;
+            }
+        }
+
+        foreach ($lowStockBarang as $barang) {
+            $hadDemand = DetailPeminjaman::where('barang_id', $barang->id)
+                ->where('created_at', '>=', $threeMonthsAgo)
+                ->exists();
+
+            if ($hadDemand && count($recommendations) < 2) {
+                $recommendations[] = [
+                    'type' => 'barang',
+                    'title' => 'Restok ' . $barang->nama_barang,
+                    'description' => "Stok {$barang->nama_barang} tersisa {$barang->tersedia} unit. Barang ini masih memiliki permintaan.",
+                    'barang_id' => $barang->id,
+                    'nama_barang' => $barang->nama_barang,
+                    'current_stock' => $barang->tersedia,
+                    'recommended_quantity' => 10,
+                    'priority' => 'medium',
+                    'score' => 80
+                ];
+                break;
+            }
+        }
+
+        return $recommendations;
+    }
+
     private function generateSmartRecommendations()
     {
         $recommendations = [];
 
-        // 1. Analisis permintaan barang (terlalu sedikit stok)
-        $topRequested = DetailPeminjaman::select('nama_barang', DB::raw('SUM(jumlah) as total_request'))
-            ->groupBy('nama_barang')
-            ->orderBy('total_request', 'desc')
-            ->limit(3)
-            ->get();
+        $promoTimeAnalysis = $this->analyzeBestPromoTime();
+        $recommendations = array_merge($recommendations, $promoTimeAnalysis);
 
-        foreach ($topRequested as $barang) {
-            // Cek stok saat ini
-            $barangDb = Barang::where('nama_barang', $barang->nama_barang)->first();
-            if ($barangDb && $barangDb->stok < 3) {
-                $recommendations[] = (object)[
-                    'type' => 'barang',
-                    'title' => 'Tambah Stok ' . $barang->nama_barang,
-                    'description' => 'Barang ini sangat diminati dengan ' . $barang->total_request . ' kali permintaan dalam periode terakhir. Stok saat ini terbatas.',
-                    'reason' => 'Berdasarkan histori permintaan tinggi',
-                    'score' => 95,
-                    'status' => 'pending'
-                ];
-            }
-        }
+        $stockAnalysis = $this->analyzeStockRecommendation();
+        $recommendations = array_merge($recommendations, $stockAnalysis);
 
-        // 2. Rekomendasi promo berdasarkan hari/liburan nasional
         $today = Carbon::now();
-        $nationalHolidays = $this->getNationalHolidays();
 
-        foreach ($nationalHolidays as $holiday) {
-            if ($today->diffInDays(Carbon::parse($holiday['date'])) <= 7) {
-                $recommendations[] = (object)[
-                    'type' => 'promo',
-                    'title' => 'Promosi ' . $holiday['name'],
-                    'description' => 'Dalam ' . $today->diffInDays(Carbon::parse($holiday['date'])) . ' hari lagi akan ada ' . $holiday['name'] . '. Persiapkan promo spesial!',
-                    'reason' => 'Berdasarkan kalender nasional',
-                    'score' => 85,
-                    'status' => 'pending'
-                ];
-            }
-        }
-
-        // 3. Rekomendasi berdasarkan weekend
         if ($today->isFriday()) {
-            $recommendations[] = (object)[
+            $recommendations[] = [
                 'type' => 'promo',
                 'title' => 'Weekend Special Promo',
-                'description' => 'Akhir pekan adalah waktu paling ramai untuk sewa barang. Buat promo diskon 10% untuk semua barang!',
-                'reason' => 'Berdasarkan analisis pola permintaan weekend',
-                'score' => 90,
-                'status' => 'pending'
+                'description' => 'Akhir pekan adalah waktu paling ramai untuk sewa barang. Buat promo diskon untuk meningkatkan penjualan!',
+                'score' => 90
             ];
         }
 
-        // 4. Analisis musim ramai/sepi
-        $currentMonth = $today->month;
-        $busyMonths = [12, 6, 7, 8]; // Desember, Juni, Juli, Agustus
-        $slowMonths = [1, 2]; // Januari, Februari
-
-        if (in_array($currentMonth, $busyMonths)) {
-            $recommendations[] = (object)[
-                'type' => 'promo',
-                'title' => 'Musim Ramai - Tingkatkan Stok',
-                'description' => 'Saat ini adalah musim ramai penyewaan. Pertimbangkan untuk menambah stok barang populer.',
-                'reason' => 'Berdasarkan analisis musim ramai',
-                'score' => 88,
-                'status' => 'pending'
-            ];
-        } elseif (in_array($currentMonth, $slowMonths)) {
-            $recommendations[] = (object)[
-                'type' => 'promo',
-                'title' => 'Promo Diskon Musim Sepi',
-                'description' => 'Musim sepi adalah waktu tepat untuk memberikan promo menarik guna meningkatkan permintaan.',
-                'reason' => 'Berdasarkan analisis musim sepi',
-                'score' => 75,
-                'status' => 'pending'
-            ];
-        }
-
-        // 5. Rekomendasi barang baru berdasarkan minat penyewa
-        $customerInterests = DetailPeminjaman::select('nama_barang', DB::raw('COUNT(DISTINCT peminjaman_id) as unique_customers'))
-            ->groupBy('nama_barang')
-            ->orderBy('unique_customers', 'desc')
-            ->limit(3)
-            ->get();
-
-        foreach ($customerInterests as $interest) {
-            $recommendations[] = (object)[
-                'type' => 'barang',
-                'title' => 'Tambah Varian ' . $interest->nama_barang,
-                'description' => 'Barang ' . $interest->nama_barang . ' memiliki ' . $interest->unique_customers . ' penyewa unik. Pertimbangkan untuk menambah varian baru.',
-                'reason' => 'Berdasarkan minat penyewa',
-                'score' => 82,
-                'status' => 'pending'
-            ];
-        }
-
-        // Simpan rekomendasi ke database
         foreach ($recommendations as $rec) {
             Recommendation::updateOrCreate(
-                ['title' => $rec->title],
+                ['title' => $rec['title']],
                 [
-                    'type' => $rec->type,
-                    'description' => $rec->description,
-                    'reason' => $rec->reason,
-                    'score' => $rec->score
+                    'type' => $rec['type'],
+                    'description' => $rec['description'],
+                    'reason' => $rec['description'],
+                    'score' => $rec['score'] ?? 80
                 ]
             );
         }
 
-        return array_slice($recommendations, 0, 3);
+        return array_map(function ($rec) {
+            return (object) $rec;
+        }, array_slice($recommendations, 0, 5));
     }
 
-    private function getNationalHolidays()
-    {
-        return [
-            ['name' => 'Tahun Baru', 'date' => date('Y') . '-01-01'],
-            ['name' => 'Hari Raya Nyepi', 'date' => date('Y') . '-03-11'],
-            ['name' => 'Hari Buruh', 'date' => date('Y') . '-05-01'],
-            ['name' => 'Hari Raya Waisak', 'date' => date('Y') . '-05-23'],
-            ['name' => 'Hari Kemerdekaan', 'date' => date('Y') . '-08-17'],
-            ['name' => 'Hari Raya Natal', 'date' => date('Y') . '-12-25'],
-        ];
-    }
+    // ==================== API ENDPOINTS ====================
 
-    /**
-     * Send WhatsApp notification
-     */
     public function sendWhatsAppNotification(Request $request)
     {
         $request->validate([
@@ -329,19 +551,11 @@ class DashboardController extends Controller
             'message' => 'required|string'
         ]);
 
-        $number = $request->number;
-        $message = $request->message;
+        $number = preg_replace('/^0/', '62', $request->number);
 
-        // Format nomor WhatsApp (hapus 0 di depan, tambah 62)
-        $number = preg_replace('/^0/', '62', $number);
-
-        // URL WhatsApp API (gunakan WhatsApp API key Anda)
-        // Contoh menggunakan Fonnte atau API lainnya
-
-        // Simpan notifikasi
         $notification = Notification::create([
             'title' => 'Notifikasi WhatsApp',
-            'message' => $message,
+            'message' => $request->message,
             'type' => 'whatsapp',
             'whatsapp_number' => $number,
             'whatsapp_sent' => true,
@@ -355,9 +569,6 @@ class DashboardController extends Controller
         ]);
     }
 
-    /**
-     * Get notifications
-     */
     public function getNotifications()
     {
         $notifications = Notification::where('status', 'unread')
@@ -371,9 +582,6 @@ class DashboardController extends Controller
         ]);
     }
 
-    /**
-     * Mark notification as read
-     */
     public function markNotificationRead(int $id)
     {
         $notification = Notification::findOrFail($id);
@@ -385,9 +593,26 @@ class DashboardController extends Controller
         ]);
     }
 
-    /**
-     * Get recommendations
-     */
+    public function markAllRead()
+    {
+        Notification::where('status', 'unread')->update(['status' => 'read']);
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Semua notifikasi telah dibaca'
+        ]);
+    }
+
+    public function getNotificationCount()
+    {
+        $count = Notification::where('status', 'unread')->count();
+
+        return response()->json([
+            'success' => true,
+            'count' => $count
+        ]);
+    }
+
     public function getRecommendations()
     {
         $recommendations = Recommendation::where('status', 'pending')
@@ -401,15 +626,11 @@ class DashboardController extends Controller
         ]);
     }
 
-    /**
-     * Accept recommendation
-     */
     public function acceptRecommendation(int $id)
     {
         $recommendation = Recommendation::findOrFail($id);
         $recommendation->update(['status' => 'approved']);
 
-        // Tambahkan notifikasi
         Notification::create([
             'title' => 'Rekomendasi Diterima',
             'message' => 'Rekomendasi "' . $recommendation->title . '" telah diterima',
@@ -422,10 +643,167 @@ class DashboardController extends Controller
         ]);
     }
 
+    public function refreshRecommendations()
+    {
+        Recommendation::where('status', 'pending')->delete();
+
+        $newRecommendations = $this->generateSmartRecommendations();
+
+        foreach ($newRecommendations as $rec) {
+            Recommendation::updateOrCreate(
+                ['title' => $rec->title],
+                [
+                    'type' => $rec->type,
+                    'description' => $rec->description,
+                    'reason' => $rec->description,
+                    'score' => $rec->score ?? 80,
+                    'status' => 'pending'
+                ]
+            );
+        }
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Rekomendasi berhasil diperbarui',
+            'count' => count($newRecommendations)
+        ]);
+    }
+
+    // ==================== DASHBOARD API ROUTES ====================
+
+    public function getRecommendationsList()
+    {
+        $rekomendasiBarang = Recommendation::where('status', 'pending')
+            ->where('type', 'barang')
+            ->orderBy('score', 'desc')
+            ->get();
+
+        $rekomendasiPromo = Recommendation::where('status', 'pending')
+            ->where('type', 'promo')
+            ->orderBy('score', 'desc')
+            ->get();
+
+        $barangList = Barang::where('status', 'aktif')->get(['id', 'nama_barang', 'tersedia']);
+
+        return response()->json([
+            'success' => true,
+            'barang' => $rekomendasiBarang,
+            'promo' => $rekomendasiPromo,
+            'barangList' => $barangList
+        ]);
+    }
+
+    public function applyRecommendation(Request $request)
+    {
+        $request->validate([
+            'id' => 'required|exists:recommendations,id'
+        ]);
+
+        $recommendation = Recommendation::findOrFail($request->id);
+        $recommendation->update(['status' => 'approved']);
+
+        Notification::create([
+            'title' => 'Rekomendasi Diterapkan',
+            'message' => 'Rekomendasi "' . $recommendation->title . '" telah diterapkan',
+            'type' => 'success',
+            'status' => 'unread'
+        ]);
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Rekomendasi berhasil diterapkan',
+            'type' => $recommendation->type
+        ]);
+    }
+
+    public function getRandomRecommendation()
+    {
+        $recommendation = Recommendation::where('status', 'pending')
+            ->inRandomOrder()
+            ->first();
+
+        if (!$recommendation) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Tidak ada rekomendasi'
+            ]);
+        }
+
+        $additionalData = [];
+        if ($recommendation->type == 'barang') {
+            $barangName = str_replace('Tambah Stok ', '', $recommendation->title);
+            $barang = Barang::where('nama_barang', 'like', "%{$barangName}%")->first();
+            if ($barang) {
+                $additionalData['current_stock'] = $barang->tersedia;
+                $additionalData['barang_id'] = $barang->id;
+            }
+
+            preg_match('/(\d+)\s*unit/i', $recommendation->description, $matches);
+            $additionalData['demand'] = $matches[1] ?? '?';
+
+            preg_match('/tambah\s*(\d+)\s*unit/i', $recommendation->description, $saranMatches);
+            $additionalData['saran_jumlah'] = $saranMatches[1] ?? '10';
+        } elseif ($recommendation->type == 'promo') {
+            preg_match('/(\d+)%/i', $recommendation->description, $gainMatches);
+            $additionalData['potential_gain'] = $gainMatches[1] ?? '15';
+
+            preg_match('/Rp\s([\d\.]+)/i', $recommendation->description, $revenueMatches);
+            $additionalData['revenue'] = $revenueMatches[1] ?? '850.000';
+        }
+
+        return response()->json([
+            'success' => true,
+            'data' => [
+                'id' => $recommendation->id,
+                'title' => $recommendation->title,
+                'description' => $recommendation->description,
+                'type' => $recommendation->type,
+                'score' => $recommendation->score,
+                'additional' => $additionalData
+            ]
+        ]);
+    }
+
+    public function getDashboardStats()
+    {
+        $currentMonth = Carbon::now()->month;
+        $currentYear = Carbon::now()->year;
+
+        $pendapatanBulanIni = Peminjaman::where('status_pengembalian', 'selesai')
+            ->whereMonth('tanggal_pengembalian_real', $currentMonth)
+            ->whereYear('tanggal_pengembalian_real', $currentYear)
+            ->sum('grand_total_with_ppn');
+
+        $sewaHariIni = Peminjaman::where('status_pengembalian', 'aktif')
+            ->whereDate('tanggal_sewa', Carbon::today())
+            ->count();
+
+        $pendapatanHariIni = Peminjaman::where('status_pengembalian', 'selesai')
+            ->whereDate('tanggal_pengembalian_real', Carbon::today())
+            ->sum('grand_total_with_ppn');
+
+        $daysInMonth = Carbon::now()->daysInMonth;
+        $avgDailyIncome = $daysInMonth > 0 ? $pendapatanBulanIni / $daysInMonth : 0;
+
+        $topProducts = DetailPeminjaman::select('nama_barang', DB::raw('SUM(jumlah) as total'))
+            ->groupBy('nama_barang')
+            ->orderBy('total', 'desc')
+            ->limit(5)
+            ->get();
+
+        return response()->json([
+            'success' => true,
+            'data' => [
+                'sewa_hari_ini' => $sewaHariIni,
+                'pendapatan_hari_ini' => $pendapatanHariIni,
+                'avg_daily_income' => $avgDailyIncome,
+                'top_products' => $topProducts
+            ]
+        ]);
+    }
 
     public function getAiOptimization($id)
     {
-        // 🔹 1. Ambil data barang
         $barang = Barang::find($id);
 
         if (!$barang) {
@@ -436,56 +814,42 @@ class DashboardController extends Controller
         }
 
         try {
-            // 🔹 2. Hitung permintaan (dari transaksi)
             $permintaan = DetailPeminjaman::where('nama_barang', $barang->nama_barang)->count();
-
-            // fallback biar ga nol
             $durasi = $permintaan > 0 ? $permintaan : 1;
 
-            // 🔹 3. Payload ke AI Flask
             $payload = [
-                'nama_barang'   => $barang->nama_barang,
-                'durasi_sewa'   => $durasi,
-                'stok_saat_itu' => (int) $barang->stok,
-                'bulan'         => (int) date('n'),
-                'hari'          => date('l'),
+                'nama_barang' => $barang->nama_barang,
+                'durasi_sewa' => $durasi,
+                'stok_saat_itu' => (int) $barang->tersedia,
+                'bulan' => (int) date('n'),
+                'hari' => date('l'),
             ];
 
-            // DEBUG (opsional tapi penting)
             Log::info('Payload ke AI:', $payload);
 
-            // 🔹 4. Call Flask
             $response = Http::timeout(10)->post('http://127.0.0.1:5000/predict', $payload);
 
-            // 🔹 5. Handle response AI
             if ($response->successful()) {
                 $result = $response->json();
-
                 return response()->json([
                     'status' => 'success',
                     'barang' => $barang->nama_barang,
-                    'stok'   => $barang->stok,
+                    'stok' => $barang->tersedia,
                     'harga_prediksi' => $result['harga_prediksi'] ?? 0,
-                    'rekomendasi'    => $result['rekomendasi'] ?? '-'
+                    'rekomendasi' => $result['rekomendasi'] ?? '-'
                 ]);
             }
 
-            // kalau AI ga respon valid
             return response()->json([
                 'status' => 'error',
                 'message' => 'AI tidak memberikan response valid'
             ], 500);
-
         } catch (\Exception $e) {
-
             Log::error('AI ERROR: ' . $e->getMessage());
-
             return response()->json([
                 'status' => 'error',
-                'message' => 'Gagal terhubung ke AI server',
-                'detail'  => $e->getMessage()
+                'message' => 'Gagal terhubung ke AI server'
             ], 500);
         }
     }
 }
-
