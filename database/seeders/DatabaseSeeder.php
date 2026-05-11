@@ -8,9 +8,14 @@ class DatabaseSeeder extends Seeder
 {
     public function run(): void
     {
+        // Urutan seeder harus memperhatikan foreign key
         $this->call([
-            BarangSeeder::class,
-            PeminjamanSeeder::class,
+            PelangganSeeder::class,      
+            BarangSeeder::class,         
+            PeminjamanSeeder::class,     
+            BiayaOperasionalSeeder::class,
+            NotificationSeeder::class,    
+            RecommendationSeeder::class,  
         ]);
     }
 }
