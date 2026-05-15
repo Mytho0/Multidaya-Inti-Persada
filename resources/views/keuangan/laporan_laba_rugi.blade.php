@@ -1,4 +1,5 @@
 @extends('layouts.app')
+ 
 
 @section('title', 'Laporan Laba Rugi - Multidaya Inti Persada')
 @section('page-title', 'Laporan Laba Rugi')
