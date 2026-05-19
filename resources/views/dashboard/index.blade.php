@@ -479,7 +479,7 @@
             </div>
             <div class="flex justify-between items-center pt-2 border-t border-slate-100">
                 <div class="bg-amber-50 px-3 py-1.5 rounded-lg">
-                    <span class="text-[10px] font-bold text-amber-600">💰 Estimasi Revenue: </span>
+                    <span class="text-[10px] font-bold text-amber-600">💰 Estimasi Pendapatan (semua stok): </span>
                     <span class="text-xs font-black text-amber-700 revenue-estimate"></span>
                 </div>
                 <button onclick="applyRekomendasi(this)" data-id="" data-type="promo"
@@ -996,134 +996,252 @@
         }
 
         function renderRekomendasiBarang() {
-            const container = document.getElementById('rekomendasiBarangList');
-            const template = document.getElementById('templateCardBarang');
+        const container = document.getElementById('rekomendasiBarangList');
+        if (!container) return;
 
-            if (!container) return;
-
-            if (currentBarangList.length === 0) {
-                container.innerHTML =
-                    `<div class="text-center py-8 text-slate-400"><i class="fas fa-inbox text-4xl mb-2 block"></i><p>Belum ada rekomendasi pengadaan barang</p></div>`;
-                return;
-            }
-
-            let html = '';
-            currentBarangList.forEach(item => {
-                let demandMatch = item.description.match(/(\d+)\s*unit.*permintaan/i);
-                let stockMatch = item.description.match(/Stok saat ini \((\d+)\)/i) || item.description.match(
-                    /tersisa (\d+) unit/i);
-                let saranMatch = item.description.match(/tambah (\d+)\s*unit/i);
-
-                let demandValue = demandMatch ? demandMatch[1] : '?';
-                let stockValue = stockMatch ? stockMatch[1] : '?';
-                let saranValue = saranMatch ? saranMatch[1] : '10';
-
-                let card = template.content.cloneNode(true);
-                card.querySelector('h4').textContent = item.title;
-                card.querySelector('.score-value').textContent = item.score || 80;
-                card.querySelector('.description').textContent = item.description;
-                card.querySelector('.stock-current').textContent = stockValue + ' unit';
-                card.querySelector('.demand-value').textContent = demandValue + ' unit/bulan';
-                card.querySelector('.quantity-suggest').textContent = '+' + saranValue + ' Unit';
-                card.querySelector('.apply-rekomendasi').setAttribute('data-id', item.id);
-                card.querySelector('.apply-rekomendasi').setAttribute('data-type', 'barang');
-
-                const div = document.createElement('div');
-                div.appendChild(card);
-                html += div.innerHTML;
-            });
-            container.innerHTML = html;
+        if (currentBarangList.length === 0) {
+            container.innerHTML = `
+                <div class="text-center py-8 text-slate-400">
+                    <i class="fas fa-check-circle text-4xl mb-2 block text-emerald-400"></i>
+                    <p class="font-bold">Stok Semua Barang Aman</p>
+                    <p class="text-xs mt-1">Tidak ada barang yang perlu ditambah saat ini</p>
+                </div>`;
+            return;
         }
+
+        container.innerHTML = '';
+        currentBarangList.forEach(item => {
+            const isKritis = item.demand_label === 'CRITICAL';
+            const color    = isKritis ? 'red' : 'amber';
+            const icon     = isKritis ? 'fa-exclamation-triangle' : 'fa-exclamation-circle';
+            const badge    = isKritis ? 'KRITIS' : 'PERLU DIPERHATIKAN';
+
+            const card = document.createElement('div');
+            card.className = 'bg-white rounded-xl border border-slate-200 p-5 hover:shadow-lg transition-all duration-300';
+            card.innerHTML = `
+                <div class="flex justify-between items-start mb-3">
+                    <div class="flex items-center gap-2">
+                        <div class="w-8 h-8 bg-${color}-100 rounded-lg flex items-center justify-center">
+                            <i class="fas ${icon} text-${color}-600 text-sm"></i>
+                        </div>
+                        <div>
+                            <h4 class="font-bold text-slate-800 text-sm">${item.nama_barang || item.title}</h4>
+                            <span class="text-[9px] font-black text-${color}-600 bg-${color}-50 px-2 py-0.5 rounded-full">${badge}</span>
+                        </div>
+                    </div>
+                    <div class="bg-indigo-50 text-indigo-600 text-[9px] font-black px-2 py-1 rounded-full">
+                        Skor: ${item.score}%
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-3 gap-2 mb-3">
+                    <div class="bg-slate-50 rounded-lg p-2 text-center">
+                        <p class="text-[8px] text-slate-400 uppercase">Utilisasi</p>
+                        <p class="text-sm font-black text-${color}-600">
+                            ${Math.round((item.utilisasi_rate || 0) * 100)}%
+                        </p>
+                    </div>
+                    <div class="bg-slate-50 rounded-lg p-2 text-center">
+                        <p class="text-[8px] text-slate-400 uppercase">Tersedia</p>
+                        <p class="text-sm font-bold text-slate-800">
+                            ${item.potential_gain?.replace('+', '').replace(' Unit', '') || '?'} sisa
+                        </p>
+                    </div>
+                    <div class="bg-slate-50 rounded-lg p-2 text-center">
+                        <p class="text-[8px] text-slate-400 uppercase">Urgensi</p>
+                        <p class="text-[10px] font-black text-${color}-600">${item.analysis_type || '-'}</p>
+                    </div>
+                </div>
+
+                <div class="bg-${color}-50 rounded-xl p-3 mb-3">
+                    <p class="text-[9px] font-bold text-${color}-600 uppercase mb-1">💡 Analisis ML</p>
+                    <p class="text-xs text-slate-600 leading-relaxed">${item.description}</p>
+                </div>
+
+                <div class="flex justify-between items-center pt-2 border-t border-slate-100">
+                    <div class="bg-emerald-50 px-3 py-1.5 rounded-lg">
+                        <span class="text-[9px] font-bold text-emerald-600">📈 Est. Revenue: </span>
+                        <span class="text-xs font-black text-emerald-700">${item.revenue_estimate || '-'}</span>
+                    </div>
+                    <button onclick="applyRekomendasi(this)"
+                        data-id="${item.id}"
+                        data-barang-id="${item.barang_id}"
+                        data-type="barang"
+                        data-nama="${item.nama_barang || item.title}"
+                        class="apply-rekomendasi bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2 px-4 rounded-lg text-xs transition-all">
+                        <i class="fas fa-plus-circle mr-1"></i> Tambah Stok
+                    </button>
+                </div>
+            `;
+            container.appendChild(card);
+        });
+    }
 
         function renderRekomendasiPromo() {
             const container = document.getElementById('rekomendasiPromoList');
-            const template = document.getElementById('templateCardPromo');
-
+            const template  = document.getElementById('templateCardPromo');
             if (!container) return;
 
             if (currentPromoList.length === 0) {
-                container.innerHTML =
-                    `<div class="text-center py-8 text-slate-400"><i class="fas fa-inbox text-4xl mb-2 block"></i><p>Belum ada rekomendasi promo</p></div>`;
+                container.innerHTML = `
+                    <div class="text-center py-8 text-slate-400">
+                        <i class="fas fa-inbox text-4xl mb-2 block"></i>
+                        <p>Belum ada rekomendasi promo</p>
+                    </div>`;
                 return;
             }
 
-            let html = '';
+            container.innerHTML = '';
+
             currentPromoList.forEach(item => {
-                let gainMatch = item.description.match(/(\d+)%/i);
-                let revenueMatch = item.description.match(/Rp\s([\d\.]+)/i);
+                const clone = template.content.cloneNode(true);
 
-                let gainValue = gainMatch ? gainMatch[1] : '15';
-                let revenueValue = revenueMatch ? revenueMatch[1] : '850.000';
+                // Pakai field ML langsung
+                clone.querySelector('h4').textContent               = item.nama_barang || item.title;
+                clone.querySelector('.score-value').textContent     = item.score || 80;
+                clone.querySelector('.analysis-type').textContent   = item.analysis_type || 'Analisis ML';
+                clone.querySelector('.potential-gain').textContent  = item.potential_gain || '-';
+                clone.querySelector('.description').textContent     = item.description;
+                clone.querySelector('.revenue-estimate').textContent = item.revenue_estimate || '-';
 
-                let card = template.content.cloneNode(true);
-                card.querySelector('h4').textContent = item.title;
-                card.querySelector('.score-value').textContent = item.score || 80;
-                card.querySelector('.description').textContent = item.description;
-                card.querySelector('.analysis-type').textContent = item.title.includes('Kamis') ? 'Hari Sepi' :
-                    'Waktu Sepi';
-                card.querySelector('.potential-gain').textContent = '+' + gainValue + '%';
-                card.querySelector('.revenue-estimate').textContent = 'Rp ' + revenueValue;
-                card.querySelector('.apply-rekomendasi').setAttribute('data-id', item.id);
-                card.querySelector('.apply-rekomendasi').setAttribute('data-type', 'promo');
+                const btn = clone.querySelector('.apply-rekomendasi');
+                btn.setAttribute('data-id',           item.id);
+                btn.setAttribute('data-type',         'promo');
+                btn.setAttribute('data-nama',         item.nama_barang || item.title);
+                btn.setAttribute('data-diskon',       item.nilai_diskon || 15);
+                btn.setAttribute('data-jenis-diskon', item.jenis_diskon || 'persen');
+                btn.setAttribute('data-deskripsi',    item.description);
+                btn.setAttribute('data-barang-id',    item.barang_id || '');
 
-                const div = document.createElement('div');
-                div.appendChild(card);
-                html += div.innerHTML;
+                // Warna icon sesuai jenis promo
+                const iconWrap = clone.querySelector('.w-8.h-8');
+                const icon     = clone.querySelector('.fa-clock');
+                if (item.jenis_promo === 'Diskon 30%') {
+                    iconWrap.className = 'w-8 h-8 bg-red-100 rounded-lg flex items-center justify-center';
+                    icon.className     = 'fas fa-fire text-red-600 text-sm';
+                } else if (item.jenis_promo === 'Bundle Deal') {
+                    iconWrap.className = 'w-8 h-8 bg-amber-100 rounded-lg flex items-center justify-center';
+                    icon.className     = 'fas fa-box text-amber-600 text-sm';
+                } else {
+                    iconWrap.className = 'w-8 h-8 bg-green-100 rounded-lg flex items-center justify-center';
+                    icon.className     = 'fas fa-star text-green-600 text-sm';
+                }
+
+                container.appendChild(clone);
             });
-            container.innerHTML = html;
         }
 
         async function applyRekomendasi(button) {
-            const id = button.getAttribute('data-id');
-            const type = button.getAttribute('data-type');
+        const id       = button.getAttribute('data-id');
+        const barangId = button.getAttribute('data-barang-id');
+        const type     = button.getAttribute('data-type');
+        const nama     = button.getAttribute('data-nama');
 
-            try {
-                const response = await fetch('{{ route('dashboard.recommendations.apply') }}', {
-                    method: 'POST',
-                    headers: {
-                        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify({
-                        id: id
-                    })
-                });
-                const result = await response.json();
+        // Gunakan barang_id untuk find di currentList
+        const rec = type === 'barang'
+            ? currentBarangList.find(r => r.barang_id == barangId)
+            : currentPromoList.find(r => r.id == id);
 
-                if (result.success) {
-                    if (type === 'barang') {
-                        const rec = currentBarangList.find(r => r.id == id);
-                        if (rec) {
-                            document.getElementById('nama_barang_inventaris').value = rec.title.replace('Tambah Stok ',
-                                '');
-                            document.getElementById('deskripsi_inventaris').value = rec.description;
+        try {
+            const response = await fetch('{{ route('dashboard.recommendations.apply') }}', {
+                method: 'POST',
+                headers: {
+                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ id: id })  // tetap kirim id untuk controller
+            });
+            const result = await response.json();
+
+            if (result.success) {
+                if (type === 'barang') {
+                    if (rec) {
+                        const namaBarang = rec.nama_barang ||
+                            rec.title
+                                .replace('Stok Kritis: ', '')
+                                .replace('Pertimbangkan Tambah Stok: ', '');
+
+                        document.getElementById('nama_barang_inventaris').value = namaBarang;
+                        document.getElementById('deskripsi_inventaris').value   = rec.description;
+
+                        // Pre-fill harga sewa
+                        if (rec.harga_sewa) {
+                            document.getElementById('harga_sewa_inventaris').value = rec.harga_sewa;
                         }
-                        closeRekomendasiBarang();
-                        openTambahInventarisModal();
-                    } else if (type === 'promo') {
-                        const rec = currentPromoList.find(r => r.id == id);
-                        if (rec) {
-                            document.getElementById('nama_promo').value = rec.title;
-                            document.getElementById('deskripsi_promo').value = rec.description;
-                            document.getElementById('diskon_promo').value = 15;
-                            document.getElementById('tanggal_mulai').value = new Date().toISOString().split('T')[0];
-                            document.getElementById('tanggal_selesai').value = new Date(Date.now() + 7 * 86400000)
-                                .toISOString().split('T')[0];
+
+                        // Pre-fill jenis barang
+                        const jenisMap = {
+                            'Proyektor': 'proyektor',
+                            'Layar'    : 'screen',
+                            'TV'       : 'tv',
+                            'Kabel'    : 'kabel',
+                        };
+                        const jenisSelect = document.getElementById('jenis_barang_inventaris');
+                        if (jenisSelect && rec.jenis_barang) {
+                            jenisSelect.value = jenisMap[rec.jenis_barang] || 'proyektor';
                         }
-                        closeRekomendasiPromo();
-                        openTambahPromoModal();
                     }
-                    showToast(result.message, 'success');
-                    loadRecommendations();
-                } else {
-                    showToast(result.message, 'error');
-                }
-            } catch (error) {
-                showToast('Gagal menerapkan rekomendasi', 'error');
-            }
-        }
+                    // Simpan barang_id ke form supaya submitInventarisCepat bisa pakai
+                    document.getElementById('formInventarisCepat')
+                            .setAttribute('data-barang-id', rec.barang_id);
 
-        function openTambahPromoModal() {
+                    closeRekomendasiBarang();
+                    openTambahInventarisModal();
+                    
+                } else if (type === 'promo') {
+                    if (rec) {
+                        document.getElementById('nama_promo').value      = `Promo AI - ${nama}`;
+                        document.getElementById('deskripsi_promo').value = rec.description;
+                        document.getElementById('jenis_diskon').value    = rec.jenis_diskon || 'persen';
+                        document.getElementById('diskon_promo').value    = rec.nilai_diskon || 15;
+
+                        const today = new Date().toISOString().split('T')[0];
+                        const end   = new Date(Date.now() + 30*24*60*60*1000).toISOString().split('T')[0];
+                        document.getElementById('tanggal_mulai').value   = today;
+                        document.getElementById('tanggal_selesai').value = end;
+                    }
+                    closeRekomendasiPromo();
+                    openTambahPromoModal(rec ? rec.barang_id : null);
+                }
+
+                showToast(result.message || 'Berhasil!', 'success');
+                loadRecommendations();
+
+            } else {
+                showToast(result.message || 'Gagal menerapkan rekomendasi', 'error');
+            }
+
+        } catch (error) {
+            console.error('Apply error:', error);
+            showToast('Gagal menerapkan rekomendasi', 'error');
+        }
+    }
+
+        function openTambahPromoModal(preSelectedBarangId = null) {
+            // Populate dari barangList yang sudah di-load, bukan fetch ulang
+            const select = document.getElementById('barang_id_promo');
+            if (select) {
+                select.innerHTML = '<option value="">Pilih Barang</option>';
+                // Ambil dari hasil loadRecommendations yang sudah ada
+                fetch('{{ route('dashboard.recommendations.list') }}', {
+                    headers: { 'X-Requested-With': 'XMLHttpRequest' }
+                })
+                .then(r => r.json())
+                .then(result => {
+                    if (result.barangList) {
+                        result.barangList.forEach(b => {
+                            const opt = document.createElement('option');
+                            opt.value = b.id;
+                            opt.textContent = `${b.nama_barang} (Tersedia: ${b.tersedia})`;
+                            select.appendChild(opt);
+                        });
+                        // Set nilai setelah dropdown terisi
+                        if (preSelectedBarangId) {
+                            select.value = preSelectedBarangId;
+                        }
+                    }
+                });
+            }
             document.getElementById('modalTambahPromo').classList.remove('hidden');
             document.getElementById('modalTambahPromo').classList.add('flex');
         }
@@ -1137,9 +1255,16 @@
         async function submitPromoCepat(e) {
             e.preventDefault();
             const formData = new FormData(e.target);
-            formData.append('barang', JSON.stringify([]));
+
+            // Validasi barang_id
+            const barangId = document.getElementById('barang_id_promo').value;
+            if (!barangId) {
+                showToast('Pilih barang terlebih dahulu!', 'error');
+                return;
+            }
+
             try {
-                const res = await fetch('/promo', {
+                const res = await fetch('{{ route('promo.store') }}', {
                     method: 'POST',
                     headers: {
                         'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
@@ -1150,9 +1275,9 @@
                 if (result.success) {
                     showToast(result.message, 'success');
                     closeTambahPromoModal();
-                    setTimeout(() => location.reload(), 1500);
+                    loadRecommendations(); // refresh rekomendasi
                 } else {
-                    showToast(result.message, 'error');
+                    showToast(result.message || 'Gagal menyimpan promo', 'error');
                 }
             } catch (error) {
                 showToast('Gagal menyimpan promo', 'error');
@@ -1172,25 +1297,44 @@
 
         async function submitInventarisCepat(e) {
             e.preventDefault();
-            const formData = new FormData(e.target);
+
+            // Ambil barang_id yang disimpan saat applyRekomendasi
+            const barangId = document.getElementById('formInventarisCepat')
+                                    .getAttribute('data-barang-id');
+            const tambahStok = parseInt(document.getElementById('tersedia_inventaris').value) || 1;
+            const hargaSewa  = parseInt(document.getElementById('harga_sewa_inventaris').value) || 0;
+            const deskripsi  = document.getElementById('deskripsi_inventaris').value;
+
+            if (!barangId) {
+                showToast('Barang ID tidak ditemukan', 'error');
+                return;
+            }
+
             try {
-                const res = await fetch('/barang', {
+                const res = await fetch(`/barang/${barangId}/tambah-stok`, {
                     method: 'POST',
                     headers: {
-                        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
+                        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
+                        'Content-Type': 'application/json'
                     },
-                    body: formData
+                    body: JSON.stringify({
+                        tambah_stok : tambahStok,
+                        harga_sewa  : hargaSewa,
+                        deskripsi   : deskripsi,
+                        catat_biaya : true   // flag untuk catat di biaya operasional
+                    })
                 });
                 const result = await res.json();
                 if (result.success) {
-                    showToast(result.message, 'success');
+                    showToast(result.message || 'Stok berhasil ditambahkan!', 'success');
                     closeTambahInventarisModal();
                     setTimeout(() => location.reload(), 1500);
                 } else {
-                    showToast(result.message, 'error');
+                    showToast(result.message || 'Gagal menyimpan', 'error');
                 }
             } catch (error) {
-                showToast('Gagal menambah inventaris', 'error');
+                console.error('Error:', error);
+                showToast('Gagal menyimpan', 'error');
             }
         }
 
@@ -1237,11 +1381,42 @@
             }
         });
 
+        async function populateBarangDropdown() {
+            try {
+                const res = await fetch('{{ route('dashboard.recommendations.list') }}', {
+                    headers: { 'X-Requested-With': 'XMLHttpRequest' }
+                });
+                const result = await res.json();
+                const select = document.getElementById('barang_id_promo');
+                if (!select || !result.barangList) return;
+
+                // Kosongkan dulu kecuali option pertama
+                select.innerHTML = '<option value="">Pilih Barang</option>';
+                result.barangList.forEach(b => {
+                    const opt = document.createElement('option');
+                    opt.value = b.id;
+                    opt.textContent = `${b.nama_barang} (Tersedia: ${b.tersedia})`;
+                    select.appendChild(opt);
+                });
+            } catch (e) {
+                console.error('Gagal load daftar barang:', e);
+            }
+        }
+
         window.onload = () => {
             generateCalendar(currentMonth, currentYear);
             initChart();
             updateWATemplate();
             loadRecommendations();
+
+            // Cek & update status promo expired/nonaktif otomatis
+            fetch('{{ route('promo.check') }}', {
+                method: 'POST',
+                headers: {
+                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
+                    'Content-Type': 'application/json'
+                }
+            }).catch(e => console.log('Promo check:', e));
         };
     </script>
 @endsection

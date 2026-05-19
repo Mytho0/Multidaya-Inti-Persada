@@ -308,4 +308,66 @@ class BarangController extends Controller
             'message' => 'Stok barang berhasil diupdate'
         ]);
     }
+
+    // Fungsi untuk menambah stok barang (dipanggil dari modal tambah stok)
+    public function tambahStok(Request $request, $id)
+    {
+        $barang = Barang::findOrFail($id);
+
+        $request->validate([
+            'tambah_stok' => 'required|integer|min:1',
+            'harga_sewa'  => 'nullable|numeric|min:0',
+        ]);
+
+        $tambah = (int) $request->tambah_stok;
+
+        DB::beginTransaction();
+        try {
+            // Update stok & tersedia barang yang sudah ada
+            $barang->update([
+                'stok'     => $barang->stok + $tambah,
+                'tersedia' => $barang->tersedia + $tambah,
+                // Update harga sewa kalau diisi berbeda
+                'harga_sewa' => $request->harga_sewa ?: $barang->harga_sewa,
+            ]);
+
+            // Catat di biaya operasional
+            if ($request->catat_biaya) {
+                $totalBiaya = $tambah * ($request->harga_sewa ?: $barang->harga_sewa);
+
+                \App\Models\BiayaOperasional::create([
+                    'kode_biaya'  => \App\Models\BiayaOperasional::generateKodeBiaya(),
+                    'sumber'      => 'inventaris',
+                    'tanggal'     => now()->toDateString(),
+                    'kategori'    => 'Pengadaan Barang',
+                    'deskripsi'   => "Penambahan stok {$barang->nama_barang} sebanyak {$tambah} unit (Rekomendasi AI)",
+                    'keterangan'  => $request->deskripsi ?? '',
+                    'jumlah'      => $totalBiaya,
+                    'status'      => 'approved',
+                    'created_by'  => Auth::id(),
+                    'approved_by' => Auth::id(),
+                    'approved_at' => now(),
+                ]);
+            }
+
+            DB::commit();
+
+            return response()->json([
+                'success' => true,
+                'message' => "Stok {$barang->nama_barang} berhasil ditambah {$tambah} unit!",
+                'data'    => [
+                    'stok_lama'    => $barang->stok - $tambah,
+                    'stok_baru'    => $barang->stok,
+                    'tersedia_baru'=> $barang->tersedia,
+                ]
+            ]);
+
+        } catch (\Exception $e) {
+            DB::rollback();
+            return response()->json([
+                'success' => false,
+                'message' => 'Gagal menambah stok: ' . $e->getMessage()
+            ], 500);
+        }
+    }
 }

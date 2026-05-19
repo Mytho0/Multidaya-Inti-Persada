@@ -6,7 +6,7 @@ use App\Http\Controllers\PeminjamanController;
 use App\Http\Controllers\BarangController;
 use App\Http\Controllers\KeuanganController;
 use Illuminate\Support\Facades\Route;
-
+use App\Http\Controllers\PromoController;
 /*
 |--------------------------------------------------------------------------
 | Web Routes
@@ -131,4 +131,15 @@ Route::middleware(['auth'])->group(function () {
         // AI Optimization
         Route::get('/ai-optimization/{id}', [DashboardController::class, 'getAiOptimization'])->name('ai-optimization');
     });
+
+    // ==================== PROMO ROUTES ====================
+    Route::middleware(['auth'])->group(function () {
+    Route::post('/promo', [PromoController::class, 'store'])->name('promo.store');
+    Route::get('/promo', [PromoController::class, 'index'])->name('promo.index');
+    Route::get('/promo/aktif/{barangId}', [PromoController::class, 'getPromoAktif'])->name('promo.aktif');
+    Route::post('/promo/check-status', [PromoController::class, 'checkAndUpdateStatus'])->name('promo.check');
+    });
 });
+
+// Route untuk tambah stok barang (dipanggil dari modal tambah stok)
+Route::post('/barang/{id}/tambah-stok', [BarangController::class, 'tambahStok']);

@@ -676,26 +676,23 @@
                                     class="w-full px-4 py-2.5 bg-emerald-900/50 border border-emerald-700 rounded-xl text-sm font-bold text-white cursor-not-allowed">
                             </div>
                             <div>
-                                <label class="block text-[10px] font-bold text-emerald-200 mb-1 uppercase">Total PPN
-                                    (Rp)</label>
+                                <label class="block text-[10px] font-bold text-emerald-200 mb-1 uppercase">Total PPN (Rp)</label>
                                 <div class="relative">
-                                    <span
-                                        class="absolute left-4 top-1/2 -translate-y-1/2 text-emerald-300 font-bold text-sm">Rp</span>
+                                    <span class="absolute left-4 top-1/2 -translate-y-1/2 text-emerald-300 font-bold text-sm">Rp</span>
                                     <input type="text" id="edit_total_ppn_display" readonly
                                         class="w-full pl-12 pr-4 py-2.5 bg-emerald-900/50 border border-emerald-700 rounded-xl text-sm font-bold text-white cursor-not-allowed">
                                     <input type="hidden" id="edit_total_ppn" name="total_ppn">
                                 </div>
                             </div>
                             <div>
-                                <label class="block text-[10px] font-bold text-emerald-200 mb-1 uppercase">Grand Total +
-                                    PPN</label>
+                                <label class="block text-[10px] font-bold text-gray-500 mb-1 uppercase">Grand Total + PPN</label>
                                 <div class="relative">
-                                    <span
-                                        class="absolute left-4 top-1/2 -translate-y-1/2 text-emerald-300 font-bold text-sm">Rp</span>
-                                    <input type="text" id="edit_grand_total_with_ppn_display" readonly
-                                        class="w-full pl-12 pr-4 py-2.5 bg-emerald-900/50 border border-emerald-700 rounded-xl text-sm font-bold text-white cursor-not-allowed">
-                                    <input type="hidden" id="edit_grand_total_with_ppn" name="grand_total_with_ppn">
+                                    <span class="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500 font-bold text-sm">Rp</span>
+                                    <input type="text" id="grand_total_with_ppn_display" value="0" readonly
+                                        class="w-full pl-12 pr-4 py-2.5 bg-gray-100 border border-gray-300 rounded-xl text-sm font-bold text-gray-800 cursor-not-allowed">
+                                    <input type="hidden" id="grand_total_with_ppn" name="grand_total_with_ppn" value="0">
                                 </div>
+                                <p id="infoJumlahHari" class="text-[10px] font-bold text-indigo-600 mt-1"></p>
                             </div>
                         </div>
                         <div class="mt-4 pt-3 border-t border-emerald-700/50">
@@ -1208,35 +1205,65 @@
         // ==================== HITUNG OTOMATIS PPN & JATUH TEMPO ====================
         function hitungOtomatis() {
             let totalHarga = 0;
+
+            // Hitung jumlah hari sewa
+            const tanggalSewa   = document.getElementById('tanggal_sewa')?.value;
+            const tanggalKembali = document.getElementById('tanggal_kembali')?.value;
+            let jumlahHari = 1; // default 1 hari
+
+            if (tanggalSewa && tanggalKembali) {
+                const start = new Date(tanggalSewa);
+                const end   = new Date(tanggalKembali);
+                const diff  = Math.ceil((end - start) / (1000 * 60 * 60 * 24));
+                jumlahHari  = diff > 0 ? diff : 1; // minimal 1 hari
+            }
+
             document.querySelectorAll('#barangContainer .barang-row').forEach(row => {
                 const select = row.querySelector('.barang-select');
-                const jumlah = row.querySelector('input[name*="[jumlah]"]')?.value || 0;
+                const jumlah = parseInt(row.querySelector('input[name*="[jumlah]"]')?.value || 0);
+
                 if (select && select.selectedIndex > 0 && jumlah > 0) {
-                    const optionText = select.options[select.selectedIndex].text;
-                    const match = optionText.match(/\(Rp\s([\d.,]+)\)/);
-                    if (match) {
-                        const harga = parseInt(match[1].replace(/\./g, '').replace(/,/g, ''));
-                        totalHarga += harga * parseInt(jumlah);
+                    let harga = 0;
+
+                    // Prioritas 1: pakai harga promo kalau ada
+                    if (select.dataset.hargaPromo) {
+                        harga = parseInt(select.dataset.hargaPromo);
+                    } else {
+                        // Prioritas 2: parsing dari teks option (harga asli)
+                        const optionText = select.options[select.selectedIndex].text;
+                        const match = optionText.match(/\(Rp\s([\d.,]+)\)/);
+                        if (match) {
+                            harga = parseInt(match[1].replace(/\./g, '').replace(/,/g, ''));
+                        }
                     }
+
+                    totalHarga += harga * jumlah * jumlahHari;
                 }
             });
 
-            const diskon = parseInt(document.getElementById('diskon')?.value || 0);
-            const grandTotal = totalHarga - diskon;
-            const ppnPersen = 0.11;
-            const totalPpn = grandTotal * ppnPersen;
+            const diskon            = parseInt(document.getElementById('diskon')?.value || 0);
+            const grandTotal        = totalHarga - diskon;
+            const ppnPersen         = 0.11;
+            const totalPpn          = grandTotal * ppnPersen;
             const grandTotalWithPpn = grandTotal + totalPpn;
 
-            document.getElementById('total_ppn_display').value = formatRupiahInput(totalPpn);
-            document.getElementById('total_ppn').value = totalPpn;
+            document.getElementById('total_ppn_display').value            = formatRupiahInput(totalPpn);
+            document.getElementById('total_ppn').value                    = totalPpn;
             document.getElementById('grand_total_with_ppn_display').value = formatRupiahInput(grandTotalWithPpn);
-            document.getElementById('grand_total_with_ppn').value = grandTotalWithPpn;
+            document.getElementById('grand_total_with_ppn').value         = grandTotalWithPpn;
 
-            const tanggalSewa = document.getElementById('tanggal_sewa')?.value;
             if (tanggalSewa) {
                 const jatuhTempo = new Date(tanggalSewa);
                 jatuhTempo.setDate(jatuhTempo.getDate() + 7);
                 document.getElementById('jatuh_tempo_pembayaran').value = jatuhTempo.toISOString().split('T')[0];
+            }
+
+            // Tampilkan info jumlah hari kalau sudah ada dua tanggal
+            const infoHari = document.getElementById('infoJumlahHari');
+            if (infoHari) {
+                infoHari.textContent = tanggalSewa && tanggalKembali
+                    ? `Durasi sewa: ${jumlahHari} hari`
+                    : '';
             }
         }
 
@@ -1312,11 +1339,23 @@
         }
 
         function attachBarangChangeEvent() {
-            document.querySelectorAll('#barangContainer .barang-select, #barangContainer input[name*="[jumlah]"]').forEach(
-                el => {
-                    el.removeEventListener('change', hitungOtomatis);
-                    el.addEventListener('change', hitungOtomatis);
-                });
+            document.querySelectorAll('#barangContainer .barang-row').forEach(row => {
+                const select = row.querySelector('.barang-select');
+                const jumlahInput = row.querySelector('input[name*="[jumlah]"]');
+
+                if (select) {
+                    select.removeEventListener('change', hitungOtomatis);
+                    select.addEventListener('change', function() {
+                        cekPromoBarang(this.value, row);
+                        hitungOtomatis();
+                    });
+                }
+
+                if (jumlahInput) {
+                    jumlahInput.removeEventListener('change', hitungOtomatis);
+                    jumlahInput.addEventListener('change', hitungOtomatis);
+                }
+            });
         }
 
         // ==================== FETCH DATA ====================
@@ -1939,6 +1978,46 @@
             fetchData();
         }
 
+        async function cekPromoBarang(barangId, row) {
+            if (!barangId) return;
+
+            const select = row.querySelector('.barang-select');
+
+            // Reset harga promo dulu
+            if (select) delete select.dataset.hargaPromo;
+
+            try {
+                const res = await fetch(`/promo/aktif/${barangId}`);
+                const result = await res.json();
+
+                const existingBadge = row.querySelector('.promo-badge');
+                if (existingBadge) existingBadge.remove();
+
+                if (result.success && result.promo) {
+                    const p = result.promo;
+
+                    // Simpan harga diskon ke data attribute select
+                    if (select) select.dataset.hargaPromo = p.harga_diskon;
+
+                    const badge = document.createElement('div');
+                    badge.className = 'promo-badge mt-1 px-2 py-1 bg-purple-50 border border-purple-200 rounded-lg text-xs flex items-center gap-1 flex-wrap';
+                    badge.innerHTML = `
+                        <span class="text-purple-600 font-bold">🎉 ${p.nama_promo}</span>
+                        <span class="text-slate-400 line-through">Rp ${p.harga_asli.toLocaleString('id-ID')}</span>
+                        <span class="text-purple-700 font-bold">→ Rp ${p.harga_diskon.toLocaleString('id-ID')}</span>
+                        <span class="text-emerald-600 font-bold">(Hemat Rp ${p.hemat.toLocaleString('id-ID')})</span>
+                        <span class="text-slate-400">s/d ${p.berlaku_hingga}</span>
+                    `;
+                    row.appendChild(badge);
+                }
+
+                hitungOtomatis();
+            } catch (e) {
+                console.error('Cek promo error:', e);
+                hitungOtomatis();
+            }
+        }
+
         document.addEventListener('DOMContentLoaded', () => {
             loadBarang();
             fetchData();
@@ -1969,6 +2048,7 @@
                 searchTimeout = setTimeout(() => searchPelangganAutocomplete(e.target.value), 300);
             });
             document.getElementById('tanggal_sewa')?.addEventListener('change', () => hitungOtomatis());
+            document.getElementById('tanggal_kembali')?.addEventListener('change', () => hitungOtomatis());
             document.getElementById('diskon')?.addEventListener('input', () => hitungOtomatis());
             attachBarangChangeEvent();
 
@@ -2000,7 +2080,13 @@
                     });
                     const result = await response.json();
                     if (result.success) {
-                        showToast(result.message, 'success');
+                        let message = result.message;
+                        if (result.promos_diterapkan && result.promos_diterapkan.length > 0) {
+                            const promoNames = result.promos_diterapkan.map(p => p.nama_promo).join(', ');
+                            const totalHemat = result.promos_diterapkan.reduce((sum, p) => sum + p.hemat, 0);
+                            message += ` 🎉 Promo: ${promoNames}. Hemat Rp ${totalHemat.toLocaleString('id-ID')}!`;
+                        }
+                        showToast(message, 'success');
                         closeTambahModal();
                         fetchData();
                     } else {

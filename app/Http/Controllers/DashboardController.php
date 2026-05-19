@@ -13,6 +13,8 @@ use App\Models\DetailPeminjaman;
 use App\Models\Notification;
 use App\Models\Recommendation;
 use Carbon\Carbon;
+use App\Services\PromoRecommendationService;
+use App\Services\BarangRecommendationService;
 
 class DashboardController extends Controller
 {
@@ -673,46 +675,58 @@ class DashboardController extends Controller
 
     public function getRecommendationsList()
     {
-        $rekomendasiBarang = Recommendation::where('status', 'pending')
-            ->where('type', 'barang')
-            ->orderBy('score', 'desc')
-            ->get();
+        // Jalankan kedua service setiap modal dibuka
+        $promoService  = new PromoRecommendationService();
+        $barangService = new BarangRecommendationService();
 
-        $rekomendasiPromo = Recommendation::where('status', 'pending')
+        $promoService->runAndSave();
+        $barangService->runAndSave();
+
+        // Ambil hasil dari DB
+        $promoRecs = DB::table('recommendations')
+            ->where('source', 'ml')
             ->where('type', 'promo')
-            ->orderBy('score', 'desc')
+            ->where('status', 'pending')
+            ->orderByDesc('score')
             ->get();
 
-        $barangList = Barang::where('status', 'aktif')->get(['id', 'nama_barang', 'tersedia']);
+        $barangRecs = DB::table('recommendations')
+            ->where('source', 'ml')
+            ->where('type', 'barang')
+            ->where('status', 'pending')
+            ->orderByDesc('score')
+            ->get();
+
+        // Ambil daftar barang untuk dropdown promo
+        $barangList = DB::table('barang')
+            ->where('status', 'aktif')
+            ->select('id', 'nama_barang', 'tersedia')
+            ->get();
 
         return response()->json([
-            'success' => true,
-            'barang' => $rekomendasiBarang,
-            'promo' => $rekomendasiPromo,
-            'barangList' => $barangList
+            'success'    => true,
+            'promo'      => $promoRecs,
+            'barang'     => $barangRecs,
+            'barangList' => $barangList,
         ]);
     }
 
     public function applyRecommendation(Request $request)
     {
-        $request->validate([
-            'id' => 'required|exists:recommendations,id'
-        ]);
+        $id = (int) $request->input('id');
 
-        $recommendation = Recommendation::findOrFail($request->id);
-        $recommendation->update(['status' => 'approved']);
+        // Cari recommendation — kalau tidak ketemu by id, skip update status
+        $recommendation = DB::table('recommendations')->where('id', $id)->first();
 
-        Notification::create([
-            'title' => 'Rekomendasi Diterapkan',
-            'message' => 'Rekomendasi "' . $recommendation->title . '" telah diterapkan',
-            'type' => 'success',
-            'status' => 'unread'
-        ]);
+        if ($recommendation) {
+            DB::table('recommendations')->where('id', $id)
+                ->update(['status' => 'approved']);
+        }
 
         return response()->json([
             'success' => true,
             'message' => 'Rekomendasi berhasil diterapkan',
-            'type' => $recommendation->type
+            'type'    => $recommendation->type ?? 'barang'
         ]);
     }
 

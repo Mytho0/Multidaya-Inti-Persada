@@ -12,6 +12,7 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Barryvdh\DomPDF\Facade\Pdf;
+use App\Models\Promo;
 use Carbon\Carbon;
 
 class PeminjamanController extends Controller
@@ -157,16 +158,37 @@ class PeminjamanController extends Controller
                     throw new \Exception('Stok barang ' . $barang->nama_barang . ' tidak mencukupi (Tersedia: ' . $barang->tersedia . ')');
                 }
 
-                $subtotal = $barang->harga_sewa * $item['jumlah'];
-                $totalHarga += $subtotal;
+                // Cek promo aktif untuk barang ini
+                $hargaSewa = $barang->harga_sewa;
+                $promoAktif = Promo::aktifUntukBarang($barang->id)->first();
+                $hargaSetelahPromo = $hargaSewa;
+                $promoInfo = null;
 
+                if ($promoAktif) {
+                    $hargaSetelahPromo = $promoAktif->hitungHargaDiskon($hargaSewa);
+                    $promoInfo = [
+                        'nama_promo'   => $promoAktif->nama_promo,
+                        'jenis_diskon' => $promoAktif->jenis_diskon,
+                        'nilai_diskon' => $promoAktif->nilai_diskon,
+                        'hemat'        => ($hargaSewa - $hargaSetelahPromo) * $item['jumlah'],
+                    ];
+                }
+
+               // Hitung jumlah hari
+                $tanggalSewa    = new \DateTime($request->tanggal_sewa);
+                $tanggalKembali = new \DateTime($request->tanggal_kembali);
+                $jumlahHari     = max(1, $tanggalSewa->diff($tanggalKembali)->days);
+
+                $subtotal    = $hargaSetelahPromo * $item['jumlah'] * $jumlahHari;
+                $totalHarga += $subtotal;
+            
                 $details[] = [
-                    'barang_id' => $barang->id,
-                    'nama_barang' => $barang->nama_barang,
+                    'barang_id'    => $barang->id,
+                    'nama_barang'  => $barang->nama_barang,
                     'jenis_barang' => $barang->jenis,
-                    'harga_sewa' => $barang->harga_sewa,
-                    'jumlah' => $item['jumlah'],
-                    'subtotal' => $subtotal
+                    'harga_sewa'   => $hargaSetelahPromo, // harga sudah termasuk diskon
+                    'jumlah'       => $item['jumlah'],
+                    'subtotal'     => $subtotal
                 ];
 
                 $barang->decrement('tersedia', $item['jumlah']);
@@ -232,11 +254,19 @@ class PeminjamanController extends Controller
                 Log::error('Auto WhatsApp notification failed: ' . $e->getMessage());
             }
 
+            // Kumpulkan info promo yang diterapkan
+            $promosDiterapkan = array_values(array_filter(
+                array_column($details, 'promo_info')
+            ));
+
             return response()->json([
-                'success' => true,
-                'message' => $isNewCustomer ? 'Peminjaman berhasil ditambahkan (Pelanggan baru)' : 'Peminjaman berhasil ditambahkan',
-                'data' => $peminjaman,
-                'is_new_customer' => $isNewCustomer
+                'success'           => true,
+                'message'           => $isNewCustomer
+                    ? 'Peminjaman berhasil ditambahkan (Pelanggan baru)'
+                    : 'Peminjaman berhasil ditambahkan',
+                'data'              => $peminjaman,
+                'is_new_customer'   => $isNewCustomer,
+                'promos_diterapkan' => $promosDiterapkan
             ]);
         } catch (\Exception $e) {
             DB::rollback();
