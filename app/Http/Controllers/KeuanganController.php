@@ -12,8 +12,8 @@ class KeuanganController extends Controller
 {
     public function index(Request $request)
     {
-        $bulan = $request->get('bulan', date('n'));
-        $tahun = $request->get('tahun', date('Y'));
+        $bulan = $request->input('bulan', date('n'));
+        $tahun = $request->input('tahun', date('Y'));
 
         // Ambil pendapatan dari peminjaman yang sudah selesai (status_pengembalian = 'selesai')
         $totalPendapatan = Peminjaman::where('status_pengembalian', 'selesai')
@@ -120,8 +120,8 @@ class KeuanganController extends Controller
 
     public function pendapatan(Request $request)
     {
-        $bulan = $request->get('bulan', date('n'));
-        $tahun = $request->get('tahun', date('Y'));
+        $bulan = $request->input('bulan', date('n'));
+        $tahun = $request->input('tahun', date('Y'));
 
         // Ambil peminjaman yang sudah selesai (status_pengembalian = 'selesai')
         $pendapatans = Peminjaman::with(['pelanggan', 'details.barang'])
@@ -169,8 +169,8 @@ class KeuanganController extends Controller
 
     public function pengeluaran(Request $request)
     {
-        $bulan = $request->get('bulan', date('n'));
-        $tahun = $request->get('tahun', date('Y'));
+        $bulan = $request->input('bulan', date('n'));
+        $tahun = $request->input('tahun', date('Y'));
 
         $pengeluarans = BiayaOperasional::with('creator')
             ->whereMonth('tanggal', $bulan)
@@ -225,8 +225,8 @@ class KeuanganController extends Controller
 
     public function laba(Request $request)
     {
-        $bulan = $request->get('bulan', date('n'));
-        $tahun = $request->get('tahun', date('Y'));
+        $bulan = $request->input('bulan', date('n'));
+        $tahun = $request->input('tahun', date('Y'));
 
         $detailPerBulan = [];
         $chartData = [];
@@ -280,8 +280,8 @@ class KeuanganController extends Controller
 
     public function laporanLabaRugi(Request $request)
     {
-        $bulan = $request->get('bulan', date('n'));
-        $tahun = $request->get('tahun', date('Y'));
+        $bulan = $request->input('bulan', date('n'));
+        $tahun = $request->input('tahun', date('Y'));
         $bulanNama = $this->getBulanName($bulan);
 
         $totalPendapatan = Peminjaman::where('status_pengembalian', 'selesai')

@@ -142,7 +142,7 @@ class DashboardController extends Controller
     }
 
     /**
-     * Get calendar events from peminjaman data
+     * Get calendar events from peminjaman data with phone numbers
      */
     private function getCalendarEvents()
     {
@@ -160,6 +160,8 @@ class DashboardController extends Controller
                     'type' => 'rental_start',
                     'customer' => $rental->nama_penyewa ?? 'Customer',
                     'invoice' => $rental->invoice_number,
+                    'no_telepon' => $rental->no_telepon ?? '-',
+                    'customer_whatsapp' => $rental->customer_whatsapp ?? $rental->no_telepon ?? '-',
                     'color' => 'green'
                 ];
             }
@@ -172,6 +174,8 @@ class DashboardController extends Controller
                     'type' => 'due_date',
                     'customer' => $rental->nama_penyewa ?? 'Customer',
                     'invoice' => $rental->invoice_number,
+                    'no_telepon' => $rental->no_telepon ?? '-',
+                    'customer_whatsapp' => $rental->customer_whatsapp ?? $rental->no_telepon ?? '-',
                     'color' => 'orange'
                 ];
             }
@@ -184,6 +188,8 @@ class DashboardController extends Controller
                     'type' => 'returned',
                     'customer' => $rental->nama_penyewa ?? 'Customer',
                     'invoice' => $rental->invoice_number,
+                    'no_telepon' => $rental->no_telepon ?? '-',
+                    'customer_whatsapp' => $rental->customer_whatsapp ?? $rental->no_telepon ?? '-',
                     'color' => 'blue'
                 ];
             }
@@ -200,6 +206,8 @@ class DashboardController extends Controller
                     'type' => 'payment_due',
                     'customer' => $rental->nama_penyewa ?? 'Customer',
                     'invoice' => $rental->invoice_number,
+                    'no_telepon' => $rental->no_telepon ?? '-',
+                    'customer_whatsapp' => $rental->customer_whatsapp ?? $rental->no_telepon ?? '-',
                     'color' => 'red'
                 ];
             }
@@ -214,7 +222,7 @@ class DashboardController extends Controller
     }
 
     /**
-     * Get reminders from peminjaman data
+     * Get reminders from peminjaman data with phone numbers
      */
     private function getRemindersFromPeminjaman()
     {
@@ -239,6 +247,8 @@ class DashboardController extends Controller
                 'is_overdue' => $isOverdue,
                 'invoice' => $rental->invoice_number,
                 'customer' => $rental->nama_penyewa,
+                'no_telepon' => $rental->no_telepon ?? '-',
+                'customer_whatsapp' => $rental->customer_whatsapp ?? $rental->no_telepon ?? '-',
                 'type' => 'return_reminder'
             ];
         }
@@ -258,6 +268,8 @@ class DashboardController extends Controller
                 'is_overdue' => false,
                 'invoice' => $rental->invoice_number,
                 'customer' => $rental->nama_penyewa,
+                'no_telepon' => $rental->no_telepon ?? '-',
+                'customer_whatsapp' => $rental->customer_whatsapp ?? $rental->no_telepon ?? '-',
                 'type' => 'start_reminder'
             ];
         }
@@ -281,6 +293,8 @@ class DashboardController extends Controller
                 'is_overdue' => $isOverdue,
                 'invoice' => $rental->invoice_number,
                 'customer' => $rental->nama_penyewa,
+                'no_telepon' => $rental->no_telepon ?? '-',
+                'customer_whatsapp' => $rental->customer_whatsapp ?? $rental->no_telepon ?? '-',
                 'type' => 'payment_reminder'
             ];
         }
@@ -294,14 +308,9 @@ class DashboardController extends Controller
         return array_slice($reminders, 0, 5);
     }
 
-    private function getGreeting()
-    {
-        $hour = Carbon::now()->hour;
-        if ($hour < 12) return 'Morning';
-        if ($hour < 18) return 'Afternoon';
-        return 'Evening';
-    }
-
+    /**
+     * Get recent activities with phone numbers
+     */
     private function getRecentActivities()
     {
         $recentPeminjaman = Peminjaman::with('details')
@@ -313,11 +322,26 @@ class DashboardController extends Controller
         foreach ($recentPeminjaman as $peminjaman) {
             $activities[] = (object)[
                 'time' => $peminjaman->created_at->format('H:i'),
+                'date' => $peminjaman->created_at->format('d M Y'),
                 'type' => $peminjaman->status_pengembalian == 'selesai' ? 'Pengembalian' : 'Peminjaman',
-                'description' => ($peminjaman->invoice_number ?? 'INV-' . $peminjaman->id) . ' - ' . ($peminjaman->details->first()->nama_barang ?? 'Barang') . ' oleh ' . ($peminjaman->nama_penyewa ?? 'Customer')
+                'description' => ($peminjaman->invoice_number ?? 'INV-' . $peminjaman->id) . ' - ' . ($peminjaman->details->first()->nama_barang ?? 'Barang') . ' oleh ' . ($peminjaman->nama_penyewa ?? 'Customer'),
+                'customer' => $peminjaman->nama_penyewa,
+                'no_telepon' => $peminjaman->no_telepon ?? '-',
+                'customer_whatsapp' => $peminjaman->customer_whatsapp ?? $peminjaman->no_telepon ?? '-',
+                'invoice' => $peminjaman->invoice_number,
+                'status_pembayaran' => $peminjaman->status_pembayaran,
+                'total' => $peminjaman->grand_total_with_ppn ?? $peminjaman->grand_total ?? 0
             ];
         }
         return $activities;
+    }
+
+    private function getGreeting()
+    {
+        $hour = Carbon::now()->hour;
+        if ($hour < 12) return 'Morning';
+        if ($hour < 18) return 'Afternoon';
+        return 'Evening';
     }
 
     private function getTopProducts()
@@ -865,5 +889,89 @@ class DashboardController extends Controller
                 'message' => 'Gagal terhubung ke AI server'
             ], 500);
         }
+    }
+
+    /**
+     * Get customer data with phone numbers for export or display
+     */
+    public function getCustomerData(Request $request)
+    {
+        $search = $request->input('search', '');
+
+        $query = Peminjaman::select(
+            'id',
+            'invoice_number',
+            'nama_penyewa',
+            'no_telepon',
+            'customer_whatsapp',
+            'email',
+            'alamat',
+            'tanggal_sewa',
+            'tanggal_kembali',
+            'status_pengembalian',
+            'status_pembayaran',
+            'grand_total_with_ppn',
+            'created_at'
+        );
+
+        if ($search) {
+            $query->where(function ($q) use ($search) {
+                $q->where('nama_penyewa', 'like', "%{$search}%")
+                    ->orWhere('no_telepon', 'like', "%{$search}%")
+                    ->orWhere('customer_whatsapp', 'like', "%{$search}%")
+                    ->orWhere('invoice_number', 'like', "%{$search}%");
+            });
+        }
+
+        $customers = $query->orderBy('created_at', 'desc')
+            ->paginate(20);
+
+        if ($request->ajax()) {
+            return response()->json([
+                'success' => true,
+                'data' => $customers->items(),
+                'pagination' => [
+                    'current_page' => $customers->currentPage(),
+                    'last_page' => $customers->lastPage(),
+                    'total' => $customers->total(),
+                    'per_page' => $customers->perPage()
+                ]
+            ]);
+        }
+
+        return response()->json([
+            'success' => true,
+            'data' => $customers->items(),
+            'total' => $customers->total()
+        ]);
+    }
+
+    /**
+     * Get all customer phone numbers for bulk WhatsApp
+     */
+    public function getCustomerPhoneNumbers(Request $request)
+    {
+        $query = Peminjaman::select('id', 'nama_penyewa', 'no_telepon', 'customer_whatsapp')
+            ->whereNotNull('no_telepon');
+
+        // Filter by status if provided
+        if ($request->status) {
+            $query->where('status_pengembalian', $request->status);
+        }
+
+        // Filter by payment status if provided
+        if ($request->payment_status) {
+            $query->where('status_pembayaran', $request->payment_status);
+        }
+
+        $customers = $query->distinct()
+            ->orderBy('nama_penyewa')
+            ->get();
+
+        return response()->json([
+            'success' => true,
+            'data' => $customers,
+            'count' => $customers->count()
+        ]);
     }
 }

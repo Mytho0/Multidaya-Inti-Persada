@@ -199,12 +199,19 @@
                     @csrf
                     <input type="hidden" id="pelanggan_id" name="pelanggan_id">
 
-                    {{-- Info Pelanggan Baru --}}
+                    {{-- Info Pelanggan Banner --}}
                     <div id="newCustomerInfo" class="hidden mb-4 p-3 bg-yellow-50 border border-yellow-200 rounded-xl">
                         <div class="flex items-center gap-2">
                             <i class="fas fa-star text-yellow-500"></i>
                             <span class="text-sm font-semibold text-yellow-700">Pelanggan Baru!</span>
                             <span class="text-xs text-yellow-600">Data akan disimpan sebagai pelanggan baru</span>
+                        </div>
+                    </div>
+                    <div id="oldCustomerInfo" class="hidden mb-4 p-3 bg-blue-50 border border-blue-200 rounded-xl">
+                        <div class="flex items-center gap-2">
+                            <i class="fas fa-check-circle text-blue-500"></i>
+                            <span class="text-sm font-semibold text-blue-700">Pelanggan Lama</span>
+                            <span class="text-xs text-blue-600" id="oldCustomerDetail"></span>
                         </div>
                     </div>
 
@@ -421,8 +428,7 @@
                         </div>
                     </div>
 
-
-                    <!-- Section 6: PPN & Jatuh Tempo -->
+                    {{-- Section 6: PPN & Jatuh Tempo --}}
                     <div class="mb-4 bg-white rounded-3xl p-6 shadow-xl border border-gray-200">
                         <div class="flex items-center gap-3 mb-4">
                             <i class="fas fa-calculator text-lg text-gray-700"></i>
@@ -441,7 +447,7 @@
                                 <div class="relative">
                                     <span
                                         class="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500 font-bold text-sm">Rp</span>
-                                    <input type="text" id="total_ppn_display" value="0" readonly
+                                    <input type="text" id="tambah_total_ppn_display" value="0" readonly
                                         class="w-full pl-12 pr-4 py-2.5 bg-gray-100 border border-gray-300 rounded-xl text-sm font-bold text-gray-800 cursor-not-allowed">
                                     <input type="hidden" id="total_ppn" name="total_ppn" value="0">
                                 </div>
@@ -452,7 +458,8 @@
                                 <div class="relative">
                                     <span
                                         class="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500 font-bold text-sm">Rp</span>
-                                    <input type="text" id="grand_total_with_ppn_display" value="0" readonly
+                                    <input type="text" id="tambah_grand_total_with_ppn_display" value="0"
+                                        readonly
                                         class="w-full pl-12 pr-4 py-2.5 bg-gray-100 border border-gray-300 rounded-xl text-sm font-bold text-gray-800 cursor-not-allowed">
                                     <input type="hidden" id="grand_total_with_ppn" name="grand_total_with_ppn"
                                         value="0">
@@ -519,6 +526,7 @@
                     @method('PUT')
                     <input type="hidden" id="edit_id" name="id">
 
+                    {{-- Section Identitas --}}
                     <div class="mb-8">
                         <div class="flex items-center gap-3 mb-5 text-amber-600">
                             <i class="fas fa-id-card"></i>
@@ -564,6 +572,58 @@
                         </div>
                     </div>
 
+                    {{-- Section Upload Bukti Pembayaran di Edit --}}
+                    <div class="mb-8">
+                        <div class="flex items-center gap-3 mb-5 text-amber-600">
+                            <i class="fas fa-credit-card"></i>
+                            <span class="text-xs font-black uppercase tracking-widest">Bukti Pembayaran</span>
+                            <div class="h-px flex-1 bg-slate-100"></div>
+                        </div>
+
+                        <div class="bg-slate-50 rounded-2xl p-5 border border-slate-200">
+                            <div class="relative">
+                                <div id="dropzoneEditBuktiPembayaran"
+                                    class="border-2 border-dashed border-slate-300 rounded-2xl p-8 text-center cursor-pointer hover:border-amber-400 hover:bg-amber-50/30 transition-all duration-300">
+                                    <div
+                                        class="w-16 h-16 bg-white rounded-full flex items-center justify-center mx-auto mb-3 shadow-sm">
+                                        <i class="fas fa-cloud-upload-alt text-2xl text-slate-400"></i>
+                                    </div>
+                                    <p class="text-sm font-semibold text-slate-600">Upload Bukti Pembayaran Baru</p>
+                                    <p class="text-[10px] text-slate-400 mt-1">Format: JPG, PNG (Maks 2MB)</p>
+                                    <input type="file" name="bukti_pembayaran" id="editBuktiPembayaranInput"
+                                        accept="image/*" class="hidden">
+                                </div>
+
+                                <div id="previewEditBuktiPembayaran"
+                                    class="hidden mt-4 animate-in fade-in slide-in-from-top-2">
+                                    <div class="relative inline-block w-full text-center">
+                                        <img id="previewImgEditBukti"
+                                            class="w-48 h-48 object-cover rounded-2xl border-4 border-white shadow-md mx-auto">
+                                        <button type="button" onclick="removeEditBuktiPembayaran()"
+                                            class="absolute -top-2 -right-2 bg-red-500 text-white rounded-full w-6 h-6 flex items-center justify-center hover:bg-red-600 transition">
+                                            <i class="fas fa-times text-xs"></i>
+                                        </button>
+                                        <div
+                                            class="absolute bottom-2 left-1/2 -translate-x-1/2 px-3 py-1 bg-amber-600 text-white text-[10px] font-black rounded-lg uppercase">
+                                            Preview Baru</div>
+                                    </div>
+                                </div>
+
+                                <div id="existingBuktiInfo" class="mt-3 p-3 bg-blue-50 rounded-xl border border-blue-100">
+                                    <div class="flex items-center gap-2">
+                                        <i class="fas fa-file-image text-blue-500"></i>
+                                        <span class="text-xs font-semibold text-blue-700">Bukti saat ini:</span>
+                                        <a id="existingBuktiLink" href="#" target="_blank"
+                                            class="text-xs text-blue-600 underline">Lihat Bukti</a>
+                                    </div>
+                                </div>
+                            </div>
+                            <p class="text-[10px] text-slate-400 mt-3 italic">*Upload ulang untuk mengganti bukti
+                                pembayaran yang ada</p>
+                        </div>
+                    </div>
+
+                    {{-- Section Jadwal --}}
                     <div class="mb-8">
                         <div class="flex items-center gap-3 mb-5 text-amber-600">
                             <i class="fas fa-clock"></i>
@@ -612,6 +672,7 @@
                         </div>
                     </div>
 
+                    {{-- Section Detail Barang --}}
                     <div class="mb-8">
                         <div class="flex items-center gap-3 mb-5 text-amber-600">
                             <i class="fas fa-boxes"></i>
@@ -627,6 +688,7 @@
                         </button>
                     </div>
 
+                    {{-- Section Pembayaran & Diskon --}}
                     <div
                         class="mb-4 bg-gradient-to-br from-slate-800 to-slate-900 rounded-3xl p-6 text-white shadow-xl shadow-slate-200">
                         <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -638,7 +700,8 @@
                                     <span
                                         class="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500 font-bold text-sm">Rp</span>
                                     <input type="number" name="diskon" id="edit_diskon" value="0"
-                                        class="w-full pl-12 pr-4 py-2.5 bg-slate-800 border border-slate-700 rounded-xl text-sm font-bold text-white focus:border-amber-500 focus:ring-0 outline-none">
+                                        class="w-full pl-12 pr-4 py-2.5 bg-slate-800 border border-slate-700 rounded-xl text-sm font-bold text-white focus:border-amber-500 focus:ring-0 outline-none"
+                                        oninput="hitungOtomatisEdit()">
                                 </div>
                             </div>
                             <div>
@@ -676,23 +739,28 @@
                                     class="w-full px-4 py-2.5 bg-emerald-900/50 border border-emerald-700 rounded-xl text-sm font-bold text-white cursor-not-allowed">
                             </div>
                             <div>
-                                <label class="block text-[10px] font-bold text-emerald-200 mb-1 uppercase">Total PPN (Rp)</label>
+                                <label class="block text-[10px] font-bold text-emerald-200 mb-1 uppercase">Total PPN
+                                    (Rp)</label>
                                 <div class="relative">
-                                    <span class="absolute left-4 top-1/2 -translate-y-1/2 text-emerald-300 font-bold text-sm">Rp</span>
+                                    <span
+                                        class="absolute left-4 top-1/2 -translate-y-1/2 text-emerald-300 font-bold text-sm">Rp</span>
                                     <input type="text" id="edit_total_ppn_display" readonly
                                         class="w-full pl-12 pr-4 py-2.5 bg-emerald-900/50 border border-emerald-700 rounded-xl text-sm font-bold text-white cursor-not-allowed">
                                     <input type="hidden" id="edit_total_ppn" name="total_ppn">
                                 </div>
                             </div>
                             <div>
-                                <label class="block text-[10px] font-bold text-gray-500 mb-1 uppercase">Grand Total + PPN</label>
+                                <label class="block text-[10px] font-bold text-emerald-200 mb-1 uppercase">Grand Total +
+                                    PPN</label>
                                 <div class="relative">
-                                    <span class="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500 font-bold text-sm">Rp</span>
-                                    <input type="text" id="grand_total_with_ppn_display" value="0" readonly
-                                        class="w-full pl-12 pr-4 py-2.5 bg-gray-100 border border-gray-300 rounded-xl text-sm font-bold text-gray-800 cursor-not-allowed">
-                                    <input type="hidden" id="grand_total_with_ppn" name="grand_total_with_ppn" value="0">
+                                    <span
+                                        class="absolute left-4 top-1/2 -translate-y-1/2 text-emerald-300 font-bold text-sm">Rp</span>
+                                    <input type="text" id="edit_grand_total_with_ppn_display" value="0" readonly
+                                        class="w-full pl-12 pr-4 py-2.5 bg-emerald-900/50 border border-emerald-700 rounded-xl text-sm font-bold text-white cursor-not-allowed">
+                                    <input type="hidden" id="edit_grand_total_with_ppn" name="grand_total_with_ppn"
+                                        value="0">
                                 </div>
-                                <p id="infoJumlahHari" class="text-[10px] font-bold text-indigo-600 mt-1"></p>
+                                <p id="edit_infoJumlahHari" class="text-[10px] font-bold text-emerald-200 mt-1"></p>
                             </div>
                         </div>
                         <div class="mt-4 pt-3 border-t border-emerald-700/50">
@@ -756,7 +824,7 @@
                             class="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-indigo-500 transition-colors">
                             <i class="fas fa-search"></i>
                         </div>
-                        <input type="text" id="searchPelanggan" placeholder="Masukkan Nama atau No. WhatsApp..."
+                        <input type="text" id="searchPelanggan" placeholder="Masukkan Nama atau No. Telepon..."
                             class="w-full pl-12 pr-4 py-4 bg-slate-50 border border-slate-200 rounded-2xl text-slate-700 font-semibold focus:outline-none focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500 focus:bg-white transition-all outline-none"
                             autocomplete="off">
                         <div id="autocompleteDropdown"
@@ -767,9 +835,21 @@
                         secara otomatis saat Anda mengetik.</p>
                 </div>
 
+                {{-- STATE: Pelanggan Ditemukan (Lama) --}}
                 <div id="hasilCekPelanggan" class="hidden animate-in slide-in-from-bottom-4 duration-300">
                     <div
                         class="bg-gradient-to-br from-white to-slate-50 border border-slate-200 rounded-[1.5rem] p-6 shadow-sm">
+                        <div class="mb-4 flex items-center gap-2 px-4 py-2.5 bg-blue-50 border border-blue-200 rounded-xl">
+                            <div class="w-7 h-7 bg-blue-500 rounded-full flex items-center justify-center flex-shrink-0">
+                                <i class="fas fa-user-check text-white text-xs"></i>
+                            </div>
+                            <div>
+                                <p class="text-xs font-black text-blue-700 uppercase tracking-wider">Pelanggan Ditemukan
+                                </p>
+                                <p class="text-[10px] text-blue-500">Data pelanggan sudah tersimpan di sistem</p>
+                            </div>
+                        </div>
+
                         <div class="flex justify-between items-start mb-6">
                             <div class="flex gap-4 items-center">
                                 <div
@@ -780,11 +860,9 @@
                                     <h4 class="font-black text-slate-800 text-xl leading-none mb-1" id="hasilNama"></h4>
                                     <div class="flex items-center gap-3">
                                         <span class="text-sm text-slate-500 font-medium flex items-center gap-1">
-                                            <i class="fab fa-whatsapp"></i>
+                                            <i class="fas fa-phone text-green-500"></i>
                                             <span id="hasilTelepon"></span>
                                         </span>
-                                        <span class="text-slate-300">•</span>
-                                        <span class="text-sm text-slate-500 font-medium" id="hasilEmail"></span>
                                     </div>
                                 </div>
                             </div>
@@ -830,24 +908,49 @@
                     </div>
                 </div>
 
-                <div id="pelangganNotFound" class="hidden py-12 text-center animate-in fade-in duration-500">
-                    <div class="relative inline-block mb-6">
-                        <div class="w-24 h-24 bg-slate-50 rounded-[2.5rem] flex items-center justify-center mx-auto">
-                            <i class="fas fa-user-slash text-4xl text-slate-200"></i>
-                        </div>
+                {{-- STATE: Pelanggan Tidak Ditemukan --}}
+                <div id="pelangganNotFound" class="hidden animate-in fade-in duration-500">
+                    <div class="mb-5 flex items-center gap-3 px-4 py-3 bg-yellow-50 border border-yellow-200 rounded-2xl">
                         <div
-                            class="absolute -bottom-1 -right-1 w-8 h-8 bg-white border-4 border-white rounded-full flex items-center justify-center shadow-sm">
-                            <i class="fas fa-question text-[10px] text-slate-400"></i>
+                            class="w-9 h-9 bg-yellow-400 rounded-xl flex items-center justify-center flex-shrink-0 shadow-sm">
+                            <i class="fas fa-user-plus text-white text-sm"></i>
                         </div>
+                        <div>
+                            <p class="text-sm font-black text-yellow-800">Pelanggan Tidak Ditemukan</p>
+                            <p class="text-[10px] text-yellow-600">Silakan daftarkan sebagai pelanggan baru</p>
+                        </div>
+                        <span
+                            class="ml-auto px-2.5 py-1 bg-yellow-200 text-yellow-800 text-[10px] font-black rounded-lg uppercase tracking-wider">BARU</span>
                     </div>
-                    <h4 class="text-xl font-black text-slate-800 mb-2 tracking-tight">Pelanggan Tidak Ditemukan</h4>
-                    <p class="text-slate-400 text-sm mb-8 max-w-[280px] mx-auto font-medium leading-relaxed">Data tidak ada
-                        dalam database kami. Silakan periksa kembali atau daftar sebagai pelanggan baru.</p>
-                    <div id="suggestionsContainer" class="mb-6 flex flex-wrap justify-center gap-2"></div>
-                    <button onclick="openNewCustomerForm()"
-                        class="inline-flex items-center gap-3 bg-indigo-600 hover:bg-indigo-700 text-white px-8 py-4 rounded-2xl font-black text-sm transition-all shadow-xl shadow-indigo-100 active:scale-95">
-                        <i class="fas fa-user-plus"></i> DAFTARKAN PELANGGAN BARU
-                    </button>
+
+                    <div class="py-8 text-center">
+                        <div class="relative inline-block mb-5">
+                            <div class="w-20 h-20 bg-slate-50 rounded-[2.5rem] flex items-center justify-center mx-auto">
+                                <i class="fas fa-user-slash text-4xl text-slate-200"></i>
+                            </div>
+                            <div
+                                class="absolute -bottom-1 -right-1 w-8 h-8 bg-white border-4 border-white rounded-full flex items-center justify-center shadow-sm">
+                                <i class="fas fa-question text-[10px] text-slate-400"></i>
+                            </div>
+                        </div>
+                        <h4 class="text-lg font-black text-slate-800 mb-1 tracking-tight">Tidak Ada di Database</h4>
+                        <p class="text-slate-400 text-sm mb-6 max-w-[280px] mx-auto font-medium leading-relaxed">Silakan
+                            periksa kembali atau daftarkan sebagai pelanggan baru.</p>
+                        <div id="suggestionsContainer" class="mb-6 flex flex-wrap justify-center gap-2"></div>
+                        <button onclick="openNewCustomerForm()"
+                            class="inline-flex items-center gap-3 bg-yellow-500 hover:bg-yellow-600 text-white px-8 py-4 rounded-2xl font-black text-sm transition-all shadow-xl shadow-yellow-100 active:scale-95">
+                            <i class="fas fa-user-plus"></i> DAFTARKAN PELANGGAN BARU
+                        </button>
+                    </div>
+                </div>
+
+                {{-- STATE: Belum ada pencarian (default) --}}
+                <div id="pelangganDefault" class="py-10 text-center">
+                    <div class="w-16 h-16 bg-slate-50 rounded-2xl flex items-center justify-center mx-auto mb-4">
+                        <i class="fas fa-users text-2xl text-slate-300"></i>
+                    </div>
+                    <p class="text-sm font-bold text-slate-400">Ketik nama atau nomor telepon untuk mencari</p>
+                    <p class="text-[10px] text-slate-300 mt-1">Sistem akan otomatis mencari saat Anda mengetik</p>
                 </div>
             </div>
         </div>
@@ -1197,25 +1300,32 @@
                 alert(msg);
                 return;
             }
+            const toastIcon = document.getElementById('toastIcon');
+            if (type === 'success') {
+                toastIcon.className = 'fas fa-check-circle text-green-500 text-lg';
+            } else if (type === 'error') {
+                toastIcon.className = 'fas fa-exclamation-circle text-red-500 text-lg';
+            } else {
+                toastIcon.className = 'fas fa-info-circle text-blue-500 text-lg';
+            }
             document.getElementById('toastMessage').textContent = msg;
             toast.classList.remove('hidden');
             setTimeout(() => toast.classList.add('hidden'), 3000);
         }
 
-        // ==================== HITUNG OTOMATIS PPN & JATUH TEMPO ====================
+        // ==================== HITUNG OTOMATIS MODAL TAMBAH ====================
         function hitungOtomatis() {
             let totalHarga = 0;
 
-            // Hitung jumlah hari sewa
-            const tanggalSewa   = document.getElementById('tanggal_sewa')?.value;
+            const tanggalSewa = document.getElementById('tanggal_sewa')?.value;
             const tanggalKembali = document.getElementById('tanggal_kembali')?.value;
-            let jumlahHari = 1; // default 1 hari
+            let jumlahHari = 1;
 
             if (tanggalSewa && tanggalKembali) {
                 const start = new Date(tanggalSewa);
-                const end   = new Date(tanggalKembali);
-                const diff  = Math.ceil((end - start) / (1000 * 60 * 60 * 24));
-                jumlahHari  = diff > 0 ? diff : 1; // minimal 1 hari
+                const end = new Date(tanggalKembali);
+                const diff = Math.ceil((end - start) / (1000 * 60 * 60 * 24));
+                jumlahHari = diff > 0 ? diff : 1;
             }
 
             document.querySelectorAll('#barangContainer .barang-row').forEach(row => {
@@ -1224,46 +1334,105 @@
 
                 if (select && select.selectedIndex > 0 && jumlah > 0) {
                     let harga = 0;
-
-                    // Prioritas 1: pakai harga promo kalau ada
                     if (select.dataset.hargaPromo) {
                         harga = parseInt(select.dataset.hargaPromo);
                     } else {
-                        // Prioritas 2: parsing dari teks option (harga asli)
                         const optionText = select.options[select.selectedIndex].text;
                         const match = optionText.match(/\(Rp\s([\d.,]+)\)/);
                         if (match) {
                             harga = parseInt(match[1].replace(/\./g, '').replace(/,/g, ''));
                         }
                     }
-
                     totalHarga += harga * jumlah * jumlahHari;
                 }
             });
 
-            const diskon            = parseInt(document.getElementById('diskon')?.value || 0);
-            const grandTotal        = totalHarga - diskon;
-            const ppnPersen         = 0.11;
-            const totalPpn          = grandTotal * ppnPersen;
+            const diskon = parseInt(document.getElementById('diskon')?.value || 0);
+            const grandTotal = totalHarga - diskon;
+            const ppnPersen = 0.11;
+            const totalPpn = grandTotal * ppnPersen;
             const grandTotalWithPpn = grandTotal + totalPpn;
 
-            document.getElementById('total_ppn_display').value            = formatRupiahInput(totalPpn);
-            document.getElementById('total_ppn').value                    = totalPpn;
-            document.getElementById('grand_total_with_ppn_display').value = formatRupiahInput(grandTotalWithPpn);
-            document.getElementById('grand_total_with_ppn').value         = grandTotalWithPpn;
+            const elPpnDisplay = document.getElementById('tambah_total_ppn_display');
+            const elPpn = document.getElementById('total_ppn');
+            const elGtDisplay = document.getElementById('tambah_grand_total_with_ppn_display');
+            const elGt = document.getElementById('grand_total_with_ppn');
+
+            if (elPpnDisplay) elPpnDisplay.value = formatRupiahInput(totalPpn);
+            if (elPpn) elPpn.value = totalPpn;
+            if (elGtDisplay) elGtDisplay.value = formatRupiahInput(grandTotalWithPpn);
+            if (elGt) elGt.value = grandTotalWithPpn;
 
             if (tanggalSewa) {
                 const jatuhTempo = new Date(tanggalSewa);
                 jatuhTempo.setDate(jatuhTempo.getDate() + 7);
-                document.getElementById('jatuh_tempo_pembayaran').value = jatuhTempo.toISOString().split('T')[0];
+                const el = document.getElementById('jatuh_tempo_pembayaran');
+                if (el) el.value = jatuhTempo.toISOString().split('T')[0];
+            }
+        }
+
+        // ==================== HITUNG OTOMATIS MODAL EDIT ====================
+        function hitungOtomatisEdit() {
+            let totalHarga = 0;
+
+            const tanggalSewa = document.getElementById('edit_tanggal_sewa')?.value;
+            const tanggalKembali = document.getElementById('edit_tanggal_kembali')?.value;
+            let jumlahHari = 1;
+
+            if (tanggalSewa && tanggalKembali) {
+                const start = new Date(tanggalSewa);
+                const end = new Date(tanggalKembali);
+                const diff = Math.ceil((end - start) / (1000 * 60 * 60 * 24));
+                jumlahHari = diff > 0 ? diff : 1;
             }
 
-            // Tampilkan info jumlah hari kalau sudah ada dua tanggal
-            const infoHari = document.getElementById('infoJumlahHari');
-            if (infoHari) {
-                infoHari.textContent = tanggalSewa && tanggalKembali
-                    ? `Durasi sewa: ${jumlahHari} hari`
-                    : '';
+            document.querySelectorAll('#editBarangContainer .barang-row').forEach(row => {
+                const select = row.querySelector('.barang-select');
+                const jumlah = parseInt(row.querySelector('input[name*="[jumlah]"]')?.value || 0);
+
+                if (select && select.selectedIndex > 0 && jumlah > 0) {
+                    let harga = 0;
+                    if (select.dataset.hargaPromo) {
+                        harga = parseInt(select.dataset.hargaPromo);
+                    } else {
+                        const optionText = select.options[select.selectedIndex].text;
+                        const match = optionText.match(/\(Rp\s([\d.,]+)\)/);
+                        if (match) {
+                            harga = parseInt(match[1].replace(/\./g, '').replace(/,/g, ''));
+                        }
+                    }
+                    totalHarga += harga * jumlah * jumlahHari;
+                }
+            });
+
+            const diskon = parseInt(document.getElementById('edit_diskon')?.value || 0);
+            const grandTotal = totalHarga - diskon;
+            const ppnPersen = 0.11;
+            const totalPpn = grandTotal * ppnPersen;
+            const grandTotalWithPpn = grandTotal + totalPpn;
+
+            const elPpnDisplay = document.getElementById('edit_total_ppn_display');
+            const elPpn = document.getElementById('edit_total_ppn');
+            const elGtDisplay = document.getElementById('edit_grand_total_with_ppn_display');
+            const elGt = document.getElementById('edit_grand_total_with_ppn');
+            const elInfo = document.getElementById('edit_infoJumlahHari');
+
+            if (elPpnDisplay) elPpnDisplay.value = formatRupiahInput(totalPpn);
+            if (elPpn) elPpn.value = totalPpn;
+            if (elGtDisplay) elGtDisplay.value = formatRupiahInput(grandTotalWithPpn);
+            if (elGt) elGt.value = grandTotalWithPpn;
+
+            if (elInfo) {
+                elInfo.textContent = (tanggalSewa && tanggalKembali) ?
+                    `Durasi sewa: ${jumlahHari} hari` :
+                    '';
+            }
+
+            if (tanggalSewa) {
+                const jatuhTempo = new Date(tanggalSewa);
+                jatuhTempo.setDate(jatuhTempo.getDate() + 7);
+                const el = document.getElementById('edit_jatuh_tempo_pembayaran');
+                if (el) el.value = jatuhTempo.toISOString().split('T')[0];
             }
         }
 
@@ -1350,10 +1519,25 @@
                         hitungOtomatis();
                     });
                 }
-
                 if (jumlahInput) {
                     jumlahInput.removeEventListener('change', hitungOtomatis);
                     jumlahInput.addEventListener('change', hitungOtomatis);
+                }
+            });
+        }
+
+        function attachEditBarangChangeEvent() {
+            document.querySelectorAll('#editBarangContainer .barang-row').forEach(row => {
+                const select = row.querySelector('.barang-select');
+                const jumlahInput = row.querySelector('input[name*="[jumlah]"]');
+
+                if (select) {
+                    select.removeEventListener('change', hitungOtomatisEdit);
+                    select.addEventListener('change', hitungOtomatisEdit);
+                }
+                if (jumlahInput) {
+                    jumlahInput.removeEventListener('change', hitungOtomatisEdit);
+                    jumlahInput.addEventListener('change', hitungOtomatisEdit);
                 }
             });
         }
@@ -1409,9 +1593,8 @@
                 const riwayatResult = await riwayatRes.json();
                 const badgeAktif = document.getElementById('badgeAktif');
                 const badgeRiwayat = document.getElementById('badgeRiwayat');
-                if (badgeAktif) badgeAktif.textContent = (aktifResult.pagination && aktifResult.pagination.total) || 0;
-                if (badgeRiwayat) badgeRiwayat.textContent = (riwayatResult.pagination && riwayatResult.pagination
-                    .total) || 0;
+                if (badgeAktif) badgeAktif.textContent = (aktifResult.pagination?.total) || 0;
+                if (badgeRiwayat) badgeRiwayat.textContent = (riwayatResult.pagination?.total) || 0;
             } catch (e) {
                 console.error('Error updating badges:', e);
             }
@@ -1432,8 +1615,8 @@
                 const totalTransaksi = item.pelanggan?.total_transaksi || 0;
                 const isPelangganBaru = totalTransaksi <= 1;
                 const badgePelanggan = isPelangganBaru ?
-                    '<span class="bg-green-100 text-green-700 text-xs px-2 py-0.5 rounded-full"><i class="fas fa-star fa-xs mr-2"></i>Baru</span>' :
-                    '<span class="bg-blue-100 text-blue-700 text-xs px-2 py-0.5 rounded-full"><i class="fas fa-check-circle fa-xs mr-2"></i>Lama</span>';
+                    '<span class="bg-green-100 text-green-700 text-xs px-2 py-0.5 rounded-full ml-1"><i class="fas fa-star fa-xs mr-1"></i>Baru</span>' :
+                    '<span class="bg-blue-100 text-blue-700 text-xs px-2 py-0.5 rounded-full ml-1"><i class="fas fa-check-circle fa-xs mr-1"></i>Lama</span>';
                 html += `<tr class="hover:bg-slate-50 transition border-b border-slate-100">
                     <td class="px-6 py-3 text-xs font-mono font-semibold">${escapeHtml(item.invoice_number)}</td>
                     <td class="px-6 py-3 text-sm font-medium">${escapeHtml(item.nama_penyewa)}${badgePelanggan}</td>
@@ -1445,11 +1628,7 @@
                         <button onclick="viewDetail(${item.id})" class="text-blue-600 hover:text-blue-800 p-1" title="Detail"><i class="fas fa-eye text-sm"></i></button>
                         ${isAktif ? `<button onclick="openEditModal(${item.id})" class="text-orange-600 hover:text-orange-800 p-1" title="Edit"><i class="fas fa-edit text-sm"></i></button>` : ''}
                         <button onclick="printInvoice(${item.id})" class="text-gray-600 hover:text-gray-800 p-1" title="Invoice"><i class="fas fa-print text-sm"></i></button>
-                        ${isAktif ? `
-                                    <button onclick="openPengembalianModal(${item.id})" class="text-green-600 hover:text-green-800 p-1" title="Pengembalian"><i class="fas fa-undo-alt text-sm"></i></button>
-                                    <button onclick="sendPengirimanNotif(${item.id})" class="text-purple-600 hover:text-purple-800 p-1" title="Kirim WhatsApp"><i class="fab fa-whatsapp text-sm"></i></button>
-                                    <button onclick="sendPengingatNotif(${item.id})" class="text-yellow-600 hover:text-yellow-800 p-1" title="Pengingat"><i class="fas fa-bell text-sm"></i></button>
-                                ` : ''}
+                        ${isAktif ? `<button onclick="openPengembalianModal(${item.id})" class="text-green-600 hover:text-green-800 p-1" title="Pengembalian"><i class="fas fa-undo-alt text-sm"></i></button>` : ''}
                         <button onclick="deleteData(${item.id})" class="text-red-600 hover:text-red-800 p-1" title="Hapus"><i class="fas fa-trash text-sm"></i></button>
                     </div></td>
                 </tr>`;
@@ -1508,14 +1687,17 @@
             }
             const form = document.getElementById('formPeminjaman');
             if (form) form.reset();
-            document.getElementById('previewBuktiPembayaran').classList.add('hidden');
-            document.getElementById('buktiPembayaranInput').value = '';
+            document.getElementById('previewBuktiPembayaran')?.classList.add('hidden');
+            const buktiInput = document.getElementById('buktiPembayaranInput');
+            if (buktiInput) buktiInput.value = '';
+            document.getElementById('newCustomerInfo')?.classList.add('hidden');
+            document.getElementById('oldCustomerInfo')?.classList.add('hidden');
+            selectedCustomer = null;
         }
 
         function printInvoice(id) {
             window.open(`/peminjaman/${id}/invoice`, '_blank');
         }
-
         async function viewDetail(id) {
             try {
                 const response = await fetch(`/peminjaman/${id}`);
@@ -1527,9 +1709,34 @@
                         detailsHtml +=
                             `<tr class="border-b"><td class="py-1.5 text-sm">${escapeHtml(d.nama_barang)}</td><td class="py-1.5 text-center text-sm">${d.jumlah}</td><td class="py-1.5 text-right text-sm">${formatRupiah(d.harga_sewa)}</td><td class="py-1.5 text-right text-sm font-semibold">${formatRupiah(d.subtotal)}</td></tr>`;
                     });
-                    const buktiPembayaranHtml = data.bukti_pembayaran ?
-                        `<div class="mb-4"><p class="font-semibold text-sm mb-2">Bukti Pembayaran:</p><img src="/storage/${data.bukti_pembayaran}" class="w-48 h-48 object-cover rounded-lg border cursor-pointer" onclick="window.open('/storage/${data.bukti_pembayaran}', '_blank')"></div>` :
-                        '';
+
+                    // TAMPILKAN BUKTI PEMBAYARAN
+                    let buktiPembayaranHtml = '';
+                    if (data.bukti_pembayaran) {
+                        buktiPembayaranHtml = `
+                    <div class="mb-4">
+                        <p class="font-semibold text-sm mb-2 flex items-center gap-2">
+                            <i class="fas fa-credit-card text-indigo-500"></i> Bukti Pembayaran:
+                        </p>
+                        <div class="relative inline-block">
+                            <img src="/storage/${data.bukti_pembayaran}" 
+                                 class="w-64 h-64 object-cover rounded-xl border-2 border-slate-200 shadow-md cursor-pointer hover:opacity-90 transition-all" 
+                                 onclick="window.open('/storage/${data.bukti_pembayaran}', '_blank')">
+                            <div class="absolute bottom-2 right-2 bg-black/50 text-white text-[10px] px-2 py-1 rounded-lg">
+                                Klik untuk perbesar
+                            </div>
+                        </div>
+                    </div>
+                `;
+                    } else {
+                        buktiPembayaranHtml = `
+                    <div class="mb-4 p-3 bg-gray-50 rounded-xl border border-dashed border-gray-300 text-center">
+                        <i class="fas fa-file-image text-gray-300 text-2xl mb-1"></i>
+                        <p class="text-xs text-gray-400">Belum ada bukti pembayaran</p>
+                    </div>
+                `;
+                    }
+
                     const buktiPengembalianHtml = data.foto_pengembalian ?
                         `<div class="mb-4"><p class="font-semibold text-sm mb-2">Dokumentasi Pengembalian:</p><img src="/storage/${data.foto_pengembalian}" class="w-48 h-48 object-cover rounded-lg border cursor-pointer" onclick="window.open('/storage/${data.foto_pengembalian}', '_blank')"></div>` :
                         '';
@@ -1537,26 +1744,26 @@
                         `<div class="mt-4 p-3 bg-gray-50 rounded-lg"><h4 class="font-semibold text-sm mb-2">Informasi Pengembalian:</h4><p class="text-sm">Tanggal Kembali Real: ${formatDate(data.tanggal_pengembalian_real) || '-'}</p><p class="text-sm">Kondisi Barang: ${data.kondisi_barang || '-'}</p>${data.kerusakan ? `<p class="text-sm">Kerusakan: ${data.kerusakan}</p>` : ''}${data.denda > 0 ? `<p class="text-sm">Denda: ${formatRupiah(data.denda)}</p>` : ''}${data.catatan_pengembalian ? `<p class="text-sm">Catatan: ${data.catatan_pengembalian}</p>` : ''}</div>` :
                         '';
                     document.getElementById('detailContent').innerHTML = `
-                        <div class="grid grid-cols-2 gap-3 mb-4 pb-3 border-b">
-                            <div><p class="text-xs text-slate-500">Invoice</p><p class="font-mono font-semibold text-sm">${data.invoice_number}</p></div>
-                            <div><p class="text-xs text-slate-500">Status</p>${getStatusBadge(data.status_pengembalian)}</div>
-                            <div><p class="text-xs text-slate-500">Penyewa</p><p class="font-semibold text-sm">${escapeHtml(data.nama_penyewa)}</p></div>
-                            <div><p class="text-xs text-slate-500">Telepon</p><p class="text-sm">${escapeHtml(data.no_telepon)}</p></div>
-                            <div><p class="text-xs text-slate-500">Tanggal Sewa</p><p class="text-sm">${formatDate(data.tanggal_sewa)} | ${data.waktu_sewa}</p></div>
-                            <div><p class="text-xs text-slate-500">Tanggal Kembali</p><p class="text-sm">${formatDate(data.tanggal_kembali)} | ${data.waktu_kembali}</p></div>
-                            <div><p class="text-xs text-slate-500">Status Pembayaran</p><p class="text-sm">${data.status_pembayaran || '-'}</p></div>
-                            <div><p class="text-xs text-slate-500">Subtotal</p><p class="text-sm">${formatRupiah(data.total_harga)}</p></div>
-                            <div><p class="text-xs text-slate-500">Diskon</p><p class="text-sm">${formatRupiah(data.diskon || 0)}</p></div>
-                            <div><p class="text-xs text-slate-500">Grand Total</p><p class="text-sm font-bold">${formatRupiah(data.grand_total)}</p></div>
-                            <div><p class="text-xs text-slate-500">PPN 11%</p><p class="text-sm font-semibold text-emerald-600">${formatRupiah(data.total_ppn || 0)}</p></div>
-                            <div class="col-span-2 bg-indigo-50 p-2 rounded-lg"><p class="text-xs text-slate-500">Grand Total + PPN</p><p class="text-lg font-bold text-indigo-600">${formatRupiah(data.grand_total_with_ppn || data.grand_total)}</p></div>
-                            <div><p class="text-xs text-slate-500">Jatuh Tempo Pembayaran</p><p class="text-sm font-semibold text-rose-600">${formatDate(data.jatuh_tempo_pembayaran) || '-'}</p></div>
-                        </div>
-                        ${buktiPembayaranHtml}
-                        <div class="mb-3"><p class="font-semibold text-sm mb-2">Detail Barang:</p><div class="overflow-x-auto"><table class="w-full text-sm"><thead><tr class="bg-gray-50"><th class="px-2 py-1 text-left">Barang</th><th class="px-2 py-1 text-center w-16">Jml</th><th class="px-2 py-1 text-right w-28">Harga</th><th class="px-2 py-1 text-right w-28">Subtotal</th></tr></thead><tbody>${detailsHtml}</tbody><tfoot><tr class="border-t"><td colspan="3" class="px-2 py-2 text-right font-bold">TOTAL</td><td class="px-2 py-2 text-right font-bold">${formatRupiah(data.total_harga)}</td></tr></tfoot></table></div></div>
-                        ${buktiPengembalianHtml}
-                        ${infoPengembalianHtml}
-                    `;
+                <div class="grid grid-cols-2 gap-3 mb-4 pb-3 border-b">
+                    <div><p class="text-xs text-slate-500">Invoice</p><p class="font-mono font-semibold text-sm">${data.invoice_number}</p></div>
+                    <div><p class="text-xs text-slate-500">Status</p>${getStatusBadge(data.status_pengembalian)}</div>
+                    <div><p class="text-xs text-slate-500">Penyewa</p><p class="font-semibold text-sm">${escapeHtml(data.nama_penyewa)}</p></div>
+                    <div><p class="text-xs text-slate-500">Telepon</p><p class="text-sm">${escapeHtml(data.no_telepon)}</p></div>
+                    <div><p class="text-xs text-slate-500">Tanggal Sewa</p><p class="text-sm">${formatDate(data.tanggal_sewa)} | ${data.waktu_sewa}</p></div>
+                    <div><p class="text-xs text-slate-500">Tanggal Kembali</p><p class="text-sm">${formatDate(data.tanggal_kembali)} | ${data.waktu_kembali}</p></div>
+                    <div><p class="text-xs text-slate-500">Status Pembayaran</p><p class="text-sm">${data.status_pembayaran || '-'}</p></div>
+                    <div><p class="text-xs text-slate-500">Subtotal</p><p class="text-sm">${formatRupiah(data.total_harga)}</p></div>
+                    <div><p class="text-xs text-slate-500">Diskon</p><p class="text-sm">${formatRupiah(data.diskon || 0)}</p></div>
+                    <div><p class="text-xs text-slate-500">Grand Total</p><p class="text-sm font-bold">${formatRupiah(data.grand_total)}</p></div>
+                    <div><p class="text-xs text-slate-500">PPN 11%</p><p class="text-sm font-semibold text-emerald-600">${formatRupiah(data.total_ppn || 0)}</p></div>
+                    <div class="col-span-2 bg-indigo-50 p-2 rounded-lg"><p class="text-xs text-slate-500">Grand Total + PPN</p><p class="text-lg font-bold text-indigo-600">${formatRupiah(data.grand_total_with_ppn || data.grand_total)}</p></div>
+                    <div><p class="text-xs text-slate-500">Jatuh Tempo Pembayaran</p><p class="text-sm font-semibold text-rose-600">${formatDate(data.jatuh_tempo_pembayaran) || '-'}</p></div>
+                </div>
+                ${buktiPembayaranHtml}
+                <div class="mb-3"><p class="font-semibold text-sm mb-2">Detail Barang:</p><div class="overflow-x-auto"><table class="w-full text-sm"><thead><tr class="bg-gray-50"><th class="px-2 py-1 text-left">Barang</th><th class="px-2 py-1 text-center w-16">Jml</th><th class="px-2 py-1 text-right w-28">Harga</th><th class="px-2 py-1 text-right w-28">Subtotal</th></tr></thead><tbody>${detailsHtml}</tbody><tfoot><tr class="border-t"><td colspan="3" class="px-2 py-2 text-right font-bold">TOTAL</td><td class="px-2 py-2 text-right font-bold">${formatRupiah(data.total_harga)}</td></tr></tfoot></table></div></div>
+                ${buktiPengembalianHtml}
+                ${infoPengembalianHtml}
+            `;
                     const modal = document.getElementById('modalDetail');
                     modal.classList.remove('hidden');
                     modal.classList.add('flex');
@@ -1578,8 +1785,7 @@
             const modal = document.getElementById('modalDeleteConfirm');
             modal.classList.remove('hidden');
             modal.classList.add('flex');
-            const confirmBtn = document.getElementById('confirmDeleteBtn');
-            confirmBtn.onclick = async () => await executeDelete();
+            document.getElementById('confirmDeleteBtn').onclick = async () => await executeDelete();
         }
 
         async function executeDelete() {
@@ -1623,45 +1829,89 @@
         async function openEditModal(id) {
             currentEditId = id;
             try {
-                const response = await fetch(`/peminjaman/${id}`);
-                const result = await response.json();
-                if (result.success) {
-                    const data = result.data;
-                    document.getElementById('edit_id').value = data.id;
-                    document.getElementById('edit_invoice_number').value = data.invoice_number;
-                    document.getElementById('edit_nama_penyewa').value = data.nama_penyewa;
-                    document.getElementById('edit_no_telepon').value = data.no_telepon;
-                    document.getElementById('edit_nama_acara').value = data.nama_acara || '';
-                    document.getElementById('edit_lokasi_acara').value = data.lokasi_acara || '';
-                    if (data.tanggal_sewa) document.getElementById('edit_tanggal_sewa').value = new Date(data
-                        .tanggal_sewa).toISOString().split('T')[0];
-                    if (data.tanggal_kembali) document.getElementById('edit_tanggal_kembali').value = new Date(data
-                        .tanggal_kembali).toISOString().split('T')[0];
-                    document.getElementById('edit_waktu_sewa').value = data.waktu_sewa || '';
-                    document.getElementById('edit_waktu_kembali').value = data.waktu_kembali || '';
-                    document.getElementById('edit_diskon').value = data.diskon || 0;
-                    document.getElementById('edit_status_pembayaran').value = data.status_pembayaran || 'belum_bayar';
-                    document.getElementById('edit_keterangan').value = data.keterangan || '';
-                    document.getElementById('edit_total_ppn_display').value = formatRupiahInput(data.total_ppn || 0);
-                    document.getElementById('edit_total_ppn').value = data.total_ppn || 0;
-                    document.getElementById('edit_grand_total_with_ppn_display').value = formatRupiahInput(data
-                        .grand_total_with_ppn || data.grand_total);
-                    document.getElementById('edit_grand_total_with_ppn').value = data.grand_total_with_ppn || data
-                        .grand_total;
-                    if (data.jatuh_tempo_pembayaran) {
-                        document.getElementById('edit_jatuh_tempo_pembayaran').value = data.jatuh_tempo_pembayaran;
+                const response = await fetch(`/peminjaman/${id}`, {
+                    headers: {
+                        'Accept': 'application/json',
+                        'X-Requested-With': 'XMLHttpRequest'
                     }
-                    const container = document.getElementById('editBarangContainer');
-                    container.innerHTML = '';
-                    if (data.details?.length) data.details.forEach(d => addEditBarangRow(d.barang_id, d.jumlah));
-                    else addEditBarangRow(null, 1);
-                    const modal = document.getElementById('modalEdit');
-                    modal.classList.remove('hidden');
-                    modal.classList.add('flex');
+                });
+
+                const contentType = response.headers.get('content-type');
+                if (!contentType || !contentType.includes('application/json')) {
+                    throw new Error('Server tidak mengembalikan JSON. Status: ' + response.status);
                 }
+
+                const result = await response.json();
+                if (!result.success) {
+                    showToast(result.message || 'Gagal mengambil data', 'error');
+                    return;
+                }
+
+                const data = result.data;
+
+                function setVal(id, val) {
+                    const el = document.getElementById(id);
+                    if (el) el.value = val ?? '';
+                }
+
+                setVal('edit_id', data.id);
+                setVal('edit_invoice_number', data.invoice_number);
+                setVal('edit_nama_penyewa', data.nama_penyewa);
+                setVal('edit_no_telepon', data.no_telepon);
+                setVal('edit_nama_acara', data.nama_acara || '');
+                setVal('edit_lokasi_acara', data.lokasi_acara || '');
+                setVal('edit_waktu_sewa', data.waktu_sewa || '');
+                setVal('edit_waktu_kembali', data.waktu_kembali || '');
+                setVal('edit_diskon', data.diskon || 0);
+                setVal('edit_status_pembayaran', data.status_pembayaran || 'belum_bayar');
+                setVal('edit_keterangan', data.keterangan || '');
+
+                if (data.tanggal_sewa) {
+                    setVal('edit_tanggal_sewa', new Date(data.tanggal_sewa).toISOString().split('T')[0]);
+                }
+                if (data.tanggal_kembali) {
+                    setVal('edit_tanggal_kembali', new Date(data.tanggal_kembali).toISOString().split('T')[0]);
+                }
+                if (data.jatuh_tempo_pembayaran) {
+                    setVal('edit_jatuh_tempo_pembayaran', data.jatuh_tempo_pembayaran);
+                }
+
+                setVal('edit_total_ppn_display', formatRupiahInput(data.total_ppn || 0));
+                setVal('edit_total_ppn', data.total_ppn || 0);
+                setVal('edit_grand_total_with_ppn_display', formatRupiahInput(data.grand_total_with_ppn || data
+                    .grand_total || 0));
+                setVal('edit_grand_total_with_ppn', data.grand_total_with_ppn || data.grand_total || 0);
+
+                // Set existing bukti pembayaran
+                if (data.bukti_pembayaran) {
+                    const existingInfo = document.getElementById('existingBuktiInfo');
+                    const existingLink = document.getElementById('existingBuktiLink');
+                    if (existingInfo && existingLink) {
+                        existingLink.href = `/storage/${data.bukti_pembayaran}`;
+                        existingInfo.classList.remove('hidden');
+                    }
+                } else {
+                    const existingInfo = document.getElementById('existingBuktiInfo');
+                    if (existingInfo) existingInfo.classList.add('hidden');
+                }
+
+                const container = document.getElementById('editBarangContainer');
+                container.innerHTML = '';
+                if (data.details?.length) {
+                    data.details.forEach(d => addEditBarangRow(d.barang_id, d.jumlah));
+                } else {
+                    addEditBarangRow(null, 1);
+                }
+
+                setTimeout(() => attachEditBarangChangeEvent(), 200);
+
+                const modal = document.getElementById('modalEdit');
+                modal.classList.remove('hidden');
+                modal.classList.add('flex');
+
             } catch (error) {
-                console.error('Error:', error);
-                showToast('Gagal mengambil data', 'error');
+                console.error('openEditModal error:', error);
+                showToast('Gagal mengambil data: ' + error.message, 'error');
             }
         }
 
@@ -1669,10 +1919,15 @@
             const modal = document.getElementById('modalEdit');
             modal.classList.add('hidden');
             modal.classList.remove('flex');
+            // Reset edit form bukti preview
+            document.getElementById('previewEditBuktiPembayaran')?.classList.add('hidden');
+            document.getElementById('editBuktiPembayaranInput').value = '';
+            currentEditId = null;
         }
 
         function addEditBarang() {
             addEditBarangRow(null, 1);
+            setTimeout(() => attachEditBarangChangeEvent(), 100);
         }
 
         function addEditBarangRow(selectedId, jumlah) {
@@ -1690,7 +1945,7 @@
                     </div>
                 </div>
                 <div class="w-28 relative">
-                    <input type="number" name="barang[${index}][jumlah]" class="w-full px-4 py-2.5 bg-white border border-slate-200 rounded-xl text-sm font-bold focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500 transition-all" value="${jumlah}">
+                    <input type="number" name="barang[${index}][jumlah]" class="w-full px-4 py-2.5 bg-white border border-slate-200 rounded-xl text-sm font-bold focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500 transition-all" value="${jumlah || 1}">
                     <span class="absolute -top-2 left-3 px-1 bg-white text-[9px] font-black text-slate-400 uppercase">Qty</span>
                 </div>
                 <button type="button" onclick="removeEditBarang(this)" class="w-10 h-10 flex items-center justify-center text-rose-500 hover:bg-rose-50 rounded-xl transition-all">
@@ -1699,13 +1954,53 @@
             `;
             container.appendChild(newRow);
             populateBarangSelects();
-            if (selectedId) newRow.querySelector('.barang-select').value = selectedId;
+            if (selectedId) {
+                setTimeout(() => {
+                    newRow.querySelector('.barang-select').value = selectedId;
+                }, 100);
+            }
         }
 
         function removeEditBarang(btn) {
             const rows = document.querySelectorAll('#editBarangContainer .barang-row');
             if (rows.length > 1) btn.closest('.barang-row').remove();
             else showToast('Minimal harus ada satu barang', 'warning');
+            setTimeout(hitungOtomatisEdit, 100);
+        }
+
+        // ==================== EDIT BUKTI PEMBAYARAN FUNCTIONS ====================
+        const editDropzoneBukti = document.getElementById('dropzoneEditBuktiPembayaran');
+        const editBuktiInput = document.getElementById('editBuktiPembayaranInput');
+        const editPreviewBukti = document.getElementById('previewEditBuktiPembayaran');
+        const editPreviewImgBukti = document.getElementById('previewImgEditBukti');
+
+        if (editDropzoneBukti && editBuktiInput) {
+            editDropzoneBukti.addEventListener('click', () => editBuktiInput.click());
+            editBuktiInput.addEventListener('change', (e) => {
+                if (e.target.files && e.target.files[0]) {
+                    const reader = new FileReader();
+                    reader.onload = (ev) => {
+                        editPreviewImgBukti.src = ev.target.result;
+                        editPreviewBukti.classList.remove('hidden');
+                        editDropzoneBukti.classList.add('hidden');
+                        const existingInfo = document.getElementById('existingBuktiInfo');
+                        if (existingInfo) existingInfo.classList.add('hidden');
+                    };
+                    reader.readAsDataURL(e.target.files[0]);
+                }
+            });
+        }
+
+        function removeEditBuktiPembayaran() {
+            editPreviewBukti.classList.add('hidden');
+            editDropzoneBukti.classList.remove('hidden');
+            editBuktiInput.value = '';
+            editPreviewImgBukti.src = '';
+            const existingInfo = document.getElementById('existingBuktiInfo');
+            const existingLink = document.getElementById('existingBuktiLink');
+            if (existingInfo && existingLink && existingLink.href !== '#') {
+                existingInfo.classList.remove('hidden');
+            }
         }
 
         // ==================== PENGEMBALIAN FUNCTIONS ====================
@@ -1747,70 +2042,6 @@
             }
         }
 
-        // ==================== WHATSAPP FUNCTIONS ====================
-        async function sendPengirimanNotif(id) {
-            if (confirm('Kirim notifikasi pengiriman ke pelanggan?')) {
-                try {
-                    const response = await fetch(`/peminjaman/${id}/send-pengiriman`, {
-                        method: 'POST',
-                        headers: {
-                            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
-                            'Accept': 'application/json'
-                        }
-                    });
-                    const result = await response.json();
-                    showToast(result.message, result.success ? 'success' : 'error');
-                } catch (error) {
-                    showToast('Gagal mengirim notifikasi', 'error');
-                }
-            }
-        }
-        async function sendPengingatNotif(id) {
-            if (confirm('Kirim pengingat pengembalian ke pelanggan?')) {
-                try {
-                    const response = await fetch(`/peminjaman/${id}/send-pengingat`, {
-                        method: 'POST',
-                        headers: {
-                            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
-                            'Accept': 'application/json'
-                        }
-                    });
-                    const result = await response.json();
-                    showToast(result.message, result.success ? 'success' : 'error');
-                } catch (error) {
-                    showToast('Gagal mengirim pengingat', 'error');
-                }
-            }
-        }
-
-        // ==================== UPLOAD BUKTI PEMBAYARAN ====================
-        const dropzoneBukti = document.getElementById('dropzoneBuktiPembayaran');
-        const buktiInput = document.getElementById('buktiPembayaranInput');
-        const previewBukti = document.getElementById('previewBuktiPembayaran');
-        const previewImgBukti = document.getElementById('previewImgBukti');
-
-        if (dropzoneBukti && buktiInput) {
-            dropzoneBukti.addEventListener('click', () => buktiInput.click());
-            buktiInput.addEventListener('change', (e) => {
-                if (e.target.files && e.target.files[0]) {
-                    const reader = new FileReader();
-                    reader.onload = (ev) => {
-                        previewImgBukti.src = ev.target.result;
-                        previewBukti.classList.remove('hidden');
-                        dropzoneBukti.classList.add('hidden');
-                    };
-                    reader.readAsDataURL(e.target.files[0]);
-                }
-            });
-        }
-
-        function removeBuktiPembayaran() {
-            previewBukti.classList.add('hidden');
-            dropzoneBukti.classList.remove('hidden');
-            buktiInput.value = '';
-            previewImgBukti.src = '';
-        }
-
         // ==================== CEK PELANGGAN FUNCTIONS ====================
         function openCekPelangganModal() {
             const modal = document.getElementById('modalCekPelanggan');
@@ -1819,6 +2050,7 @@
             document.getElementById('searchPelanggan').value = '';
             document.getElementById('hasilCekPelanggan').classList.add('hidden');
             document.getElementById('pelangganNotFound').classList.add('hidden');
+            document.getElementById('pelangganDefault').classList.remove('hidden');
             document.getElementById('autocompleteDropdown').classList.add('hidden');
         }
 
@@ -1830,14 +2062,28 @@
 
         async function searchPelangganAutocomplete(keyword) {
             try {
-                const response = await fetch(`/api/pelanggan/list?search=${encodeURIComponent(keyword)}`);
+                const response = await fetch(`/api/pelanggan/list?search=${encodeURIComponent(keyword)}`, {
+                    headers: {
+                        'Accept': 'application/json',
+                        'X-Requested-With': 'XMLHttpRequest'
+                    }
+                });
+
+                const contentType = response.headers.get('content-type');
+                if (!contentType || !contentType.includes('application/json')) {
+                    document.getElementById('autocompleteDropdown').classList.add('hidden');
+                    return;
+                }
+
                 const result = await response.json();
                 const dropdown = document.getElementById('autocompleteDropdown');
                 if (result.data?.length) {
                     let html = '';
                     result.data.forEach(p => {
-                        html +=
-                            `<div onclick="selectPelangganSuggestion(${p.id}, '${escapeHtml(p.nama)}', '${escapeHtml(p.no_telepon)}')" class="px-4 py-2 hover:bg-gray-100 cursor-pointer border-b border-slate-100 last:border-0"><div class="font-medium">${escapeHtml(p.nama)}</div><div class="text-xs text-slate-500">${escapeHtml(p.no_telepon)}</div></div>`;
+                        html += `<div onclick="selectPelangganSuggestion(${p.id}, '${escapeHtml(p.nama)}', '${escapeHtml(p.no_telepon)}')" class="px-4 py-2 hover:bg-gray-100 cursor-pointer border-b border-slate-100 last:border-0">
+                            <div class="font-medium">${escapeHtml(p.nama)}</div>
+                            <div class="text-xs text-slate-500">${escapeHtml(p.no_telepon)}</div>
+                        </div>`;
                     });
                     dropdown.innerHTML = html;
                     dropdown.classList.remove('hidden');
@@ -1845,7 +2091,7 @@
                     dropdown.classList.add('hidden');
                 }
             } catch (error) {
-                console.error('Error:', error);
+                console.error('Autocomplete error:', error);
                 document.getElementById('autocompleteDropdown').classList.add('hidden');
             }
         }
@@ -1857,31 +2103,47 @@
         }
 
         async function searchPelanggan(keyword) {
+            document.getElementById('hasilCekPelanggan').classList.add('hidden');
+            document.getElementById('pelangganNotFound').classList.add('hidden');
+            document.getElementById('pelangganDefault').classList.add('hidden');
+
             try {
                 const response = await fetch('/api/pelanggan/cek', {
                     method: 'POST',
                     headers: {
                         'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
                         'Content-Type': 'application/json',
-                        'Accept': 'application/json'
+                        'Accept': 'application/json',
+                        'X-Requested-With': 'XMLHttpRequest'
                     },
                     body: JSON.stringify({
-                        keyword
+                        keyword: keyword
                     })
                 });
+
+                const contentType = response.headers.get('content-type');
+                if (!contentType || !contentType.includes('application/json')) {
+                    showToast('Sesi habis. Silakan refresh halaman.', 'error');
+                    return;
+                }
+
                 const result = await response.json();
+
                 if (result.exists) {
-                    document.getElementById('newCustomerInfo').classList.add('hidden');
-                    const isPelangganBaru = result.total_transaksi <= 1;
+                    const totalTransaksi = result.total_transaksi || 0;
+                    const isPelangganLama = totalTransaksi > 1;
+                    const isPelangganBaru = totalTransaksi <= 1;
+                    const statusText = isPelangganBaru ? 'Pelanggan Baru' : 'Pelanggan Lama';
                     const statusColor = isPelangganBaru ? 'bg-green-100 text-green-700' : 'bg-blue-100 text-blue-700';
+
                     document.getElementById('hasilNama').innerHTML =
-                        `${escapeHtml(result.data.nama)} <span class="text-xs ${statusColor} px-2 py-0.5 rounded-full ml-2">${isPelangganBaru ? 'Pelanggan Baru' : 'Pelanggan Lama'}</span>`;
+                        `${escapeHtml(result.data.nama)} <span class="text-xs ${statusColor} px-2 py-0.5 rounded-full ml-2">${statusText}</span>`;
                     document.getElementById('hasilTelepon').textContent = result.data.no_telepon;
-                    document.getElementById('hasilEmail').textContent = result.data.email || '-';
                     document.getElementById('hasilTotalTransaksi').innerHTML =
-                        `<span class="text-lg font-bold">${result.total_transaksi}</span> <span class="text-sm ${isPelangganBaru ? 'text-green-600' : 'text-blue-600'} ml-1">(transaksi)</span>`;
+                        `<span class="text-lg font-bold">${totalTransaksi}</span> <span class="text-sm ${isPelangganBaru ? 'text-green-600' : 'text-blue-600'} ml-1">(transaksi)</span>`;
                     document.getElementById('hasilTotalNilai').innerHTML =
-                        `<span class="text-lg font-bold">${formatRupiah(result.total_nilai)}</span>`;
+                        `<span class="text-lg font-bold">${formatRupiah(result.total_nilai || 0)}</span>`;
+
                     const statusSpan = document.getElementById('hasilStatus');
                     if (result.data.status === 'aktif') {
                         statusSpan.textContent = 'Aktif';
@@ -1892,68 +2154,90 @@
                         statusSpan.className =
                             'px-3 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-tighter bg-red-100 text-red-700';
                     }
+
                     const riwayatList = document.getElementById('riwayatList');
                     if (result.riwayat?.length) {
                         let riwayatHtml = '';
                         result.riwayat.forEach(r => {
-                            riwayatHtml +=
-                                `<div class="bg-white rounded-lg p-2 border border-slate-200"><div class="flex justify-between items-center"><span class="font-mono text-xs font-semibold">${r.invoice_number}</span><span class="text-xs ${r.status_pengembalian === 'aktif' ? 'text-green-600' : 'text-gray-500'}">${r.status_pengembalian === 'aktif' ? '🟢 Aktif' : '✅ Selesai'}</span></div><div class="text-xs text-slate-500 mt-1">Tanggal: ${formatDate(r.tanggal_sewa)} - ${formatDate(r.tanggal_kembali)}</div><div class="text-xs font-semibold mt-1">Total: ${formatRupiah(r.grand_total_with_ppn || r.grand_total)}</div></div>`;
+                            riwayatHtml += `<div class="bg-white rounded-lg p-2 border border-slate-200">
+                                <div class="flex justify-between items-center">
+                                    <span class="font-mono text-xs font-semibold">${r.invoice_number}</span>
+                                    <span class="text-xs ${r.status_pengembalian === 'aktif' ? 'text-green-600' : 'text-gray-500'}">${r.status_pengembalian === 'aktif' ? '🟢 Aktif' : '✅ Selesai'}</span>
+                                </div>
+                                <div class="text-xs text-slate-500 mt-1">Tanggal: ${formatDate(r.tanggal_sewa)} - ${formatDate(r.tanggal_kembali)}</div>
+                                <div class="text-xs font-semibold mt-1">Total: ${formatRupiah(r.grand_total_with_ppn || r.grand_total)}</div>
+                            </div>`;
                         });
                         riwayatList.innerHTML = riwayatHtml;
                     } else {
                         riwayatList.innerHTML = '<p class="text-xs text-slate-500">Belum ada riwayat peminjaman</p>';
                     }
+
                     selectedCustomer = result.data;
                     document.getElementById('hasilCekPelanggan').classList.remove('hidden');
-                    document.getElementById('pelangganNotFound').classList.add('hidden');
                 } else {
-                    document.getElementById('newCustomerInfo').classList.remove('hidden');
-                    document.getElementById('hasilCekPelanggan').classList.add('hidden');
+                    selectedCustomer = null;
                     document.getElementById('pelangganNotFound').classList.remove('hidden');
+
                     const suggestionsContainer = document.getElementById('suggestionsContainer');
                     if (result.suggestions?.length) {
-                        let suggestionsHtml = '<p class="text-sm text-slate-600 mb-2">Pelanggan dengan nama mirip:</p>';
+                        let suggestionsHtml =
+                            '<p class="text-sm text-slate-600 mb-2 font-semibold">📋 Pelanggan dengan nama mirip:</p>';
                         result.suggestions.forEach(s => {
-                            suggestionsHtml +=
-                                `<div onclick="selectPelangganSuggestion(${s.id}, '${escapeHtml(s.nama)}', '${escapeHtml(s.no_telepon)}')" class="p-2 bg-gray-100 rounded-lg mb-2 cursor-pointer hover:bg-gray-200"><div class="font-medium">${escapeHtml(s.nama)}</div><div class="text-xs text-slate-500">${escapeHtml(s.no_telepon)}</div></div>`;
+                            suggestionsHtml += `<div onclick="selectPelangganSuggestion(${s.id}, '${escapeHtml(s.nama)}', '${escapeHtml(s.no_telepon)}')"
+                                class="p-3 bg-white border border-slate-200 rounded-xl mb-2 cursor-pointer hover:bg-indigo-50 hover:border-indigo-300 transition-all">
+                                <div class="font-semibold text-slate-800">${escapeHtml(s.nama)}</div>
+                                <div class="text-xs text-slate-500">📞 ${escapeHtml(s.no_telepon)}</div>
+                            </div>`;
                         });
                         suggestionsContainer.innerHTML = suggestionsHtml;
                     } else {
-                        suggestionsContainer.innerHTML = '';
+                        suggestionsContainer.innerHTML =
+                            '<p class="text-sm text-slate-500">Tidak ada saran pelanggan mirip.</p>';
                     }
-                    selectedCustomer = null;
                 }
             } catch (error) {
-                console.error('Error:', error);
-                showToast('Gagal mengecek pelanggan', 'error');
+                console.error('searchPelanggan error:', error);
+                showToast('Gagal mengecek pelanggan: ' + error.message, 'error');
+                document.getElementById('pelangganDefault').classList.remove('hidden');
             }
         }
 
         function useExistingCustomer() {
-            if (selectedCustomer) {
-                document.getElementById('newCustomerInfo').classList.add('hidden');
-                document.getElementById('pelanggan_id').value = selectedCustomer.id;
-                document.getElementById('nama_penyewa').value = selectedCustomer.nama;
-                document.getElementById('no_telepon').value = selectedCustomer.no_telepon;
-                document.getElementById('email').value = selectedCustomer.email || '';
-                document.getElementById('alamat').value = selectedCustomer.alamat || '';
-                document.getElementById('tipe_pelanggan').value = selectedCustomer.tipe || 'perorangan';
-                closeCekPelangganModal();
-                showToast('Data pelanggan berhasil diisi', 'success');
-            } else {
+            if (!selectedCustomer) {
                 showToast('Tidak ada data pelanggan yang dipilih', 'error');
+                return;
             }
+
+            document.getElementById('pelanggan_id').value = selectedCustomer.id;
+            document.getElementById('nama_penyewa').value = selectedCustomer.nama;
+            document.getElementById('no_telepon').value = selectedCustomer.no_telepon;
+            document.getElementById('alamat').value = selectedCustomer.alamat || '';
+            document.getElementById('tipe_pelanggan').value = selectedCustomer.tipe || 'perorangan';
+
+            document.getElementById('newCustomerInfo').classList.add('hidden');
+            const oldInfo = document.getElementById('oldCustomerInfo');
+            oldInfo.classList.remove('hidden');
+            document.getElementById('oldCustomerDetail').textContent =
+                `${selectedCustomer.nama} — sudah ${selectedCustomer.total_transaksi || 0} transaksi`;
+
+            closeCekPelangganModal();
+            showToast('Data pelanggan lama berhasil diisi', 'success');
         }
 
         function openNewCustomerForm() {
-            document.getElementById('newCustomerInfo').classList.remove('hidden');
+            const keyword = document.getElementById('searchPelanggan').value || '';
             closeCekPelangganModal();
+
             document.getElementById('pelanggan_id').value = '';
-            document.getElementById('nama_penyewa').value = '';
-            document.getElementById('no_telepon').value = document.getElementById('searchPelanggan').value || '';
-            document.getElementById('email').value = '';
+            document.getElementById('nama_penyewa').value = keyword;
+            document.getElementById('no_telepon').value = '';
             document.getElementById('alamat').value = '';
             document.getElementById('tipe_pelanggan').value = 'perorangan';
+
+            document.getElementById('oldCustomerInfo').classList.add('hidden');
+            document.getElementById('newCustomerInfo').classList.remove('hidden');
+
             document.getElementById('nama_penyewa').focus();
         }
 
@@ -1980,27 +2264,19 @@
 
         async function cekPromoBarang(barangId, row) {
             if (!barangId) return;
-
             const select = row.querySelector('.barang-select');
-
-            // Reset harga promo dulu
             if (select) delete select.dataset.hargaPromo;
-
             try {
                 const res = await fetch(`/promo/aktif/${barangId}`);
                 const result = await res.json();
-
                 const existingBadge = row.querySelector('.promo-badge');
                 if (existingBadge) existingBadge.remove();
-
                 if (result.success && result.promo) {
                     const p = result.promo;
-
-                    // Simpan harga diskon ke data attribute select
                     if (select) select.dataset.hargaPromo = p.harga_diskon;
-
                     const badge = document.createElement('div');
-                    badge.className = 'promo-badge mt-1 px-2 py-1 bg-purple-50 border border-purple-200 rounded-lg text-xs flex items-center gap-1 flex-wrap';
+                    badge.className =
+                        'promo-badge mt-1 px-2 py-1 bg-purple-50 border border-purple-200 rounded-lg text-xs flex items-center gap-1 flex-wrap';
                     badge.innerHTML = `
                         <span class="text-purple-600 font-bold">🎉 ${p.nama_promo}</span>
                         <span class="text-slate-400 line-through">Rp ${p.harga_asli.toLocaleString('id-ID')}</span>
@@ -2010,7 +2286,6 @@
                     `;
                     row.appendChild(badge);
                 }
-
                 hitungOtomatis();
             } catch (e) {
                 console.error('Cek promo error:', e);
@@ -2018,9 +2293,11 @@
             }
         }
 
+        // ==================== DOM READY ====================
         document.addEventListener('DOMContentLoaded', () => {
             loadBarang();
             fetchData();
+
             document.getElementById('filterSort')?.addEventListener('change', (e) => {
                 currentFilters.sort = e.target.value;
                 currentPage = 1;
@@ -2041,24 +2318,38 @@
             });
             document.getElementById('searchPelanggan')?.addEventListener('input', (e) => {
                 clearTimeout(searchTimeout);
-                if (e.target.value.length < 2) {
+                const val = e.target.value.trim();
+                if (val.length < 2) {
                     document.getElementById('autocompleteDropdown').classList.add('hidden');
+                    if (val.length === 0) {
+                        document.getElementById('hasilCekPelanggan').classList.add('hidden');
+                        document.getElementById('pelangganNotFound').classList.add('hidden');
+                        document.getElementById('pelangganDefault').classList.remove('hidden');
+                    }
                     return;
                 }
-                searchTimeout = setTimeout(() => searchPelangganAutocomplete(e.target.value), 300);
+                searchTimeout = setTimeout(() => {
+                    searchPelangganAutocomplete(val);
+                    setTimeout(() => searchPelanggan(val), 200);
+                }, 350);
             });
-            document.getElementById('tanggal_sewa')?.addEventListener('change', () => hitungOtomatis());
-            document.getElementById('tanggal_kembali')?.addEventListener('change', () => hitungOtomatis());
-            document.getElementById('diskon')?.addEventListener('input', () => hitungOtomatis());
+
+            document.getElementById('tanggal_sewa')?.addEventListener('change', hitungOtomatis);
+            document.getElementById('tanggal_kembali')?.addEventListener('change', hitungOtomatis);
+            document.getElementById('diskon')?.addEventListener('input', hitungOtomatis);
             attachBarangChangeEvent();
 
+            document.getElementById('edit_tanggal_sewa')?.addEventListener('change', hitungOtomatisEdit);
+            document.getElementById('edit_tanggal_kembali')?.addEventListener('change', hitungOtomatisEdit);
+
+            // ==================== SUBMIT FORM TAMBAH ====================
             document.getElementById('formPeminjaman')?.addEventListener('submit', async (e) => {
                 e.preventDefault();
                 const formData = new FormData(e.target);
                 const barang = [];
                 document.querySelectorAll('#barangContainer .barang-row').forEach(row => {
-                    const id = row.querySelector('[name*="[id]"]')?.value,
-                        jumlah = row.querySelector('[name*="[jumlah]"]')?.value;
+                    const id = row.querySelector('[name*="[id]"]')?.value;
+                    const jumlah = row.querySelector('[name*="[jumlah]"]')?.value;
                     if (id && jumlah) barang.push({
                         id: parseInt(id),
                         jumlah: parseInt(jumlah)
@@ -2069,6 +2360,15 @@
                     return;
                 }
                 formData.append('barang', JSON.stringify(barang));
+
+                const submitBtn = e.target.querySelector('button[type="submit"]');
+                const originalContent = submitBtn?.innerHTML;
+                if (submitBtn) {
+                    submitBtn.disabled = true;
+                    submitBtn.innerHTML =
+                        '<i class="fas fa-circle-notch fa-spin mr-2"></i> Menyimpan...';
+                }
+
                 try {
                     const response = await fetch('/peminjaman', {
                         method: 'POST',
@@ -2081,10 +2381,13 @@
                     const result = await response.json();
                     if (result.success) {
                         let message = result.message;
-                        if (result.promos_diterapkan && result.promos_diterapkan.length > 0) {
-                            const promoNames = result.promos_diterapkan.map(p => p.nama_promo).join(', ');
-                            const totalHemat = result.promos_diterapkan.reduce((sum, p) => sum + p.hemat, 0);
-                            message += ` 🎉 Promo: ${promoNames}. Hemat Rp ${totalHemat.toLocaleString('id-ID')}!`;
+                        if (result.promos_diterapkan?.length > 0) {
+                            const promoNames = result.promos_diterapkan.map(p => p.nama_promo).join(
+                                ', ');
+                            const totalHemat = result.promos_diterapkan.reduce((sum, p) => sum + p
+                                .hemat, 0);
+                            message +=
+                                ` 🎉 Promo: ${promoNames}. Hemat Rp ${totalHemat.toLocaleString('id-ID')}!`;
                         }
                         showToast(message, 'success');
                         closeTambahModal();
@@ -2094,16 +2397,28 @@
                     }
                 } catch (error) {
                     showToast('Gagal menyimpan', 'error');
+                } finally {
+                    if (submitBtn) {
+                        submitBtn.disabled = false;
+                        submitBtn.innerHTML = originalContent;
+                    }
                 }
             });
 
+            // ==================== SUBMIT FORM EDIT ====================
             document.getElementById('formEditPeminjaman')?.addEventListener('submit', async (e) => {
                 e.preventDefault();
+
                 const id = document.getElementById('edit_id').value;
+                if (!id) {
+                    showToast('ID peminjaman tidak ditemukan', 'error');
+                    return;
+                }
+
                 const barang = [];
                 document.querySelectorAll('#editBarangContainer .barang-row').forEach(row => {
-                    const idBarang = row.querySelector('[name*="[id]"]')?.value,
-                        jumlah = row.querySelector('[name*="[jumlah]"]')?.value;
+                    const idBarang = row.querySelector('[name*="[id]"]')?.value;
+                    const jumlah = row.querySelector('[name*="[jumlah]"]')?.value;
                     if (idBarang && jumlah) barang.push({
                         id: parseInt(idBarang),
                         jumlah: parseInt(jumlah)
@@ -2113,6 +2428,7 @@
                     showToast('Pilih minimal satu barang', 'error');
                     return;
                 }
+
                 const data = {
                     nama_penyewa: document.getElementById('edit_nama_penyewa').value,
                     no_telepon: document.getElementById('edit_no_telepon').value,
@@ -2126,31 +2442,58 @@
                     diskon: document.getElementById('edit_diskon').value,
                     status_pembayaran: document.getElementById('edit_status_pembayaran').value,
                     keterangan: document.getElementById('edit_keterangan').value,
-                    barang
+                    total_ppn: document.getElementById('edit_total_ppn').value,
+                    grand_total_with_ppn: document.getElementById('edit_grand_total_with_ppn')
+                        .value,
+                    barang: barang
                 };
+
+                const submitBtn = e.target.querySelector('button[type="submit"]');
+                const originalContent = submitBtn?.innerHTML;
+                if (submitBtn) {
+                    submitBtn.disabled = true;
+                    submitBtn.innerHTML =
+                        '<i class="fas fa-circle-notch fa-spin mr-2"></i> Menyimpan...';
+                }
+
                 try {
                     const response = await fetch(`/peminjaman/${id}`, {
                         method: 'PUT',
                         headers: {
                             'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')
                                 .content,
-                            'Content-Type': 'application/json'
+                            'Content-Type': 'application/json',
+                            'Accept': 'application/json',
+                            'X-Requested-With': 'XMLHttpRequest'
                         },
                         body: JSON.stringify(data)
                     });
+
+                    const contentType = response.headers.get('content-type');
+                    if (!contentType || !contentType.includes('application/json')) {
+                        throw new Error('Server mengembalikan bukan JSON. Status: ' + response.status);
+                    }
+
                     const result = await response.json();
                     if (result.success) {
-                        showToast(result.message, 'success');
+                        showToast(result.message || 'Data berhasil diperbarui', 'success');
                         closeEditModal();
                         fetchData();
                     } else {
-                        showToast(result.message, 'error');
+                        showToast(result.message || 'Gagal memperbarui data', 'error');
                     }
                 } catch (error) {
-                    showToast('Gagal mengupdate data', 'error');
+                    console.error('Submit edit error:', error);
+                    showToast('Gagal mengupdate: ' + error.message, 'error');
+                } finally {
+                    if (submitBtn) {
+                        submitBtn.disabled = false;
+                        submitBtn.innerHTML = originalContent;
+                    }
                 }
             });
 
+            // ==================== SUBMIT FORM PENGEMBALIAN ====================
             document.getElementById('formPengembalian')?.addEventListener('submit', async (e) => {
                 e.preventDefault();
                 const id = document.getElementById('pengembalianId').value;
@@ -2177,10 +2520,12 @@
                 }
             });
 
+            // ==================== DROPZONE PENGEMBALIAN ====================
             const dropzone = document.getElementById('dropzonePengembalian'),
                 fileInput = document.getElementById('fotoPengembalian'),
                 preview = document.getElementById('previewPengembalian'),
                 previewImg = document.getElementById('previewImgPengembalian');
+
             if (dropzone && fileInput) {
                 dropzone.addEventListener('click', () => fileInput.click());
                 dropzone.addEventListener('dragover', (e) => {

@@ -155,22 +155,6 @@
                         <i class="fas fa-sign-in-alt text-xs"></i>
                         <span>Login</span>
                     </button>
-                </form>
-
-                <!-- Informasi Demo - Lebih compact -->
-                <div class="mt-5 pt-4 border-t border-blue-500/20">
-                    <div class="bg-black/20 rounded-xl p-3">
-                        <p class="text-white/50 text-[10px] text-center mb-1.5 uppercase tracking-wider">
-                            <i class="fas fa-info-circle mr-1"></i> Demo Credentials
-                        </p>
-                        <div class="text-white/50 text-[10px] text-center space-y-0.5">
-                            <p>Username: <span
-                                    class="text-blue-300 font-mono bg-black/30 px-2 py-0.5 rounded text-[10px]">admin</span>
-                            </p>
-                            <p>Password: <span
-                                    class="text-blue-300 font-mono bg-black/30 px-2 py-0.5 rounded text-[10px]">password123</span>
-                            </p>
-                        </div>
                     </div>
                 </div>
             </div>
@@ -178,7 +162,7 @@
             <!-- Footer - Lebih minimalis -->
             <div class="text-center mt-6">
                 <p class="text-white/30 text-[10px]">
-                    <i class="fas fa-copyright"></i> 2024 Multidaya Inti Persada. All rights reserved.
+                    <i class="fas fa-copyright"></i> 2026 Multidaya Inti Persada. All rights reserved.
                 </p>
             </div>
         </div>
