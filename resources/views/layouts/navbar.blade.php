@@ -138,9 +138,9 @@
                             </p>
                             <p class="text-[9px] text-slate-500">@ {{ Auth::user() ? Auth::user()->username : '' }}</p>
                         </div>
-                        <a href="#"
-                            class="flex items-center gap-2 px-3 py-1.5 text-xs text-slate-700 hover:bg-[#cfe1f4]/30 transition-colors duration-200">
-                            <i class="fas fa-user-circle text-[#4d7cbf] w-3"></i> Profile
+                
+                
+                
                         </a>
                         <hr class="my-1 border-[#cfe1f4]">
                         <form method="POST" action="{{ route('logout') }}">
