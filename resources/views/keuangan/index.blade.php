@@ -187,7 +187,8 @@
                     </div>
                     <div>
                         <h3 class="text-xl font-black text-slate-800 tracking-tight">Rincian Biaya</h3>
-                        <p class="text-[10px] text-slate-400 font-bold uppercase tracking-widest mt-0.5">Alokasi Pengeluaran
+                        <p class="text-[10px] text-slate-400 font-bold uppercase tracking-widest mt-0.5">Alokasi
+                            Pengeluaran
                             Kas</p>
                     </div>
                 </div>
@@ -290,7 +291,7 @@
                             <th class="px-4 py-3 text-left text-xs font-semibold text-slate-500 uppercase">Kategori</th>
                             <th class="px-4 py-3 text-left text-xs font-semibold text-slate-500 uppercase">Deskripsi</th>
                             <th class="px-4 py-3 text-right text-xs font-semibold text-slate-500 uppercase">Jumlah</th>
-                            <th class="px-4 py-3 text-center text-xs font-semibold text-slate-500 uppercase">Referensi</th>
+                            <th class="px-4 py-3 text-left text-xs font-semibold text-slate-500 uppercase">Referensi</th>
                             <th class="px-4 py-3 text-center text-xs font-semibold text-slate-500 uppercase">Aksi</th>
                         </tr>
                     </thead>
@@ -318,21 +319,24 @@
                                     title="{{ $biaya->deskripsi }}">{{ Str::limit($biaya->deskripsi, 40) }}</td>
                                 <td class="px-4 py-3 text-sm font-semibold text-red-600 text-right">Rp
                                     {{ number_format($biaya->jumlah, 0, ',', '.') }}</td>
-                                <td class="px-4 py-3 text-sm text-slate-500 text-center">{{ $biaya->referensi ?? '-' }}
-                                </td>
-                                <td class="px-4 py-3 text-center"><span
-                            
+                                <td class="px-4 py-3 text-sm text-slate-500">{{ $biaya->referensi ?? '-' }}</td>
                                 <td class="px-4 py-3 text-center">
-                                    <button onclick="viewBiayaDetail({{ $biaya->id }})""><i
+                                    <button onclick="viewBiayaDetail({{ $biaya->id }})"
+                                        class="text-blue-600 hover:text-blue-800 p-1" title="Lihat Detail">
+                                        <i class="fas fa-eye text-sm"></i>
+                                    </button>
                                     <button onclick="deleteBiaya({{ $biaya->id }})"
-                                        class="text-red-600 hover:text-red-800 p-1"><i
-                                            class="fas fa-trash text-sm"></i></button>
+                                        class="text-red-600 hover:text-red-800 p-1" title="Hapus">
+                                        <i class="fas fa-trash text-sm"></i>
+                                    </button>
                                 </td>
                             </tr>
                         @empty
                             <tr>
-                                <td colspan="9" class="px-4 py-12 text-center text-slate-400"><i
-                                        class="fas fa-inbox text-4xl mb-2 block"></i>Belum ada data biaya operasional</td>
+                                <td colspan="8" class="px-4 py-12 text-center text-slate-400">
+                                    <i class="fas fa-inbox text-4xl mb-2 block"></i>
+                                    Belum ada data biaya operasional
+                                </td>
                             </tr>
                         @endforelse
                     </tbody>
@@ -342,7 +346,7 @@
                             </td>
                             <td class="px-4 py-3 text-right font-bold text-red-600 text-lg">Rp
                                 {{ number_format($riwayatBiaya->sum('jumlah'), 0, ',', '.') }}</td>
-                            <td colspan="3"></td>
+                            <td colspan="2"></td>
                         </tr>
                     </tfoot>
                 </table>
@@ -531,17 +535,23 @@
             window.location.href = `?bulan=${document.getElementById('bulanSelect').value}&tahun=${this.value}`;
         });
 
-        // Filter functions
+        // Filter functions - Redirect ke halaman detail
         function filterByPendapatan() {
-            alert('Menampilkan detail pendapatan dari penyewaan barang');
+            const bulan = document.getElementById('bulanSelect').value;
+            const tahun = document.getElementById('tahunSelect').value;
+            window.location.href = `{{ route('keuangan.pendapatan') }}?bulan=${bulan}&tahun=${tahun}`;
         }
 
         function filterByBiaya() {
-            alert('Menampilkan detail biaya operasional, promosi, dan inventaris');
+            const bulan = document.getElementById('bulanSelect').value;
+            const tahun = document.getElementById('tahunSelect').value;
+            window.location.href = `{{ route('keuangan.pengeluaran') }}?bulan=${bulan}&tahun=${tahun}`;
         }
 
         function filterByLaba() {
-            alert('Menampilkan ringkasan laba bersih perusahaan');
+            const bulan = document.getElementById('bulanSelect').value;
+            const tahun = document.getElementById('tahunSelect').value;
+            window.location.href = `{{ route('keuangan.laba') }}?bulan=${bulan}&tahun=${tahun}`;
         }
 
         // Sidebar Modal
@@ -565,7 +575,7 @@
             const formData = new FormData(e.target);
             const data = Object.fromEntries(formData.entries());
             try {
-                const response = await fetch('/keuangan', {
+                const response = await fetch('{{ route('keuangan.store') }}', {
                     method: 'POST',
                     headers: {
                         'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
@@ -604,7 +614,7 @@
             const startDate = document.getElementById('filterStartDate').value;
             const endDate = document.getElementById('filterEndDate').value;
             const sumber = document.getElementById('filterSumber').value;
-            let url = `/keuangan/riwayat-json?`;
+            let url = `{{ route('keuangan.riwayat-json') }}?`;
             if (startDate) url += `start_date=${startDate}&`;
             if (endDate) url += `end_date=${endDate}&`;
             if (sumber && sumber !== 'all') url += `sumber=${sumber}`;
@@ -622,7 +632,7 @@
             if (!tbody) return;
             if (data.length === 0) {
                 tbody.innerHTML =
-                    '<tr><td colspan="9" class="px-4 py-12 text-center text-slate-400"><i class="fas fa-inbox text-4xl mb-2 block"></i>Belum ada数据</td></tr>';
+                    '<tr><td colspan="8" class="px-4 py-12 text-center text-slate-400"><i class="fas fa-inbox text-4xl mb-2 block"></i>Belum ada data biaya operasional</td></tr>';
                 return;
             }
             let html = '';
@@ -632,22 +642,55 @@
                     (b.sumber === 'promosi' ?
                         '<span class="bg-violet-100 text-violet-600 text-xs px-2 py-1 rounded-full"><i class="fas fa-bullhorn mr-1"></i>Promosi</span>' :
                         '<span class="bg-amber-100 text-amber-600 text-xs px-2 py-1 rounded-full"><i class="fas fa-boxes mr-1"></i>Inventaris</span>'
-                        );
+                    );
                 html +=
-                    `<tr><td class="px-4 py-3 text-xs font-mono font-semibold">${b.kode_biaya}<\/td><td class="px-4 py-3 text-sm">${new Date(b.tanggal).toLocaleDateString('id-ID')}<\/td><td class="px-4 py-3">${badge}<\/td><td class="px-4 py-3 text-sm">${escapeHtml(b.kategori)}<\/td><td class="px-4 py-3 text-sm max-w-xs truncate" title="${escapeHtml(b.deskripsi)}">${escapeHtml(b.deskripsi.substring(0,40))}${b.deskripsi.length>40?'...':''}<\/td><td class="px-4 py-3 text-sm font-semibold text-red-600 text-right">Rp ${new Intl.NumberFormat('id-ID').format(b.jumlah)}<\/td><td class="px-4 py-3 text-sm text-center">${b.referensi||'-'}<\/td><td class="px-4 py-3 text-center"><span class="bg-green-100 text-green-600 text-xs px-2 py-1 rounded-full">✅ Disetujui<\/span><\/td><td class="px-4 py-3 text-center"><button onclick="viewBiayaDetail(${b.id})" class="text-blue-600 p-1"><i class="fas fa-eye"><\/i><\/button><button onclick="deleteBiaya(${b.id})" class="text-red-600 p-1"><i class="fas fa-trash"><\/i><\/button><\/td><\/tr>`;
+                    `<tr>
+                        <td class="px-4 py-3 text-xs font-mono font-semibold">${escapeHtml(b.kode_biaya)}</td>
+                        <td class="px-4 py-3 text-sm">${new Date(b.tanggal).toLocaleDateString('id-ID')}</td>
+                        <td class="px-4 py-3">${badge}</td>
+                        <td class="px-4 py-3 text-sm">${escapeHtml(b.kategori)}</td>
+                        <td class="px-4 py-3 text-sm max-w-xs truncate" title="${escapeHtml(b.deskripsi)}">${escapeHtml(b.deskripsi.substring(0,40))}${b.deskripsi.length>40?'...':''}</td>
+                        <td class="px-4 py-3 text-sm font-semibold text-red-600 text-right">Rp ${new Intl.NumberFormat('id-ID').format(b.jumlah)}</td>
+                        <td class="px-4 py-3 text-sm">${escapeHtml(b.referensi) || '-'}</td>
+                        <td class="px-4 py-3 text-center">
+                            <button onclick="viewBiayaDetail(${b.id})" class="text-blue-600 hover:text-blue-800 p-1" title="Lihat Detail">
+                                <i class="fas fa-eye text-sm"></i>
+                            </button>
+                            <button onclick="deleteBiaya(${b.id})" class="text-red-600 hover:text-red-800 p-1" title="Hapus">
+                                <i class="fas fa-trash text-sm"></i>
+                            </button>
+                        </td>
+                    </tr>`;
             });
             const tfoot = tbody.parentElement.querySelector('tfoot');
-            if (tfoot) tfoot.innerHTML =
-                `<tr><td colspan="5" class="px-4 py-3 text-right font-bold">TOTAL PENGELUARAN<\/td><td class="px-4 py-3 text-right font-bold text-red-600">Rp ${new Intl.NumberFormat('id-ID').format(total)}<\/td><td colspan="3"><\/td><\/tr>`;
+            if (tfoot) {
+                tfoot.innerHTML = `
+                    <tr>
+                        <td colspan="5" class="px-4 py-3 text-right font-bold text-slate-700">TOTAL PENGELUARAN</td>
+                        <td class="px-4 py-3 text-right font-bold text-red-600 text-lg">Rp ${new Intl.NumberFormat('id-ID').format(total)}</td>
+                        <td colspan="2"></td>
+                    </tr>`;
+            }
             tbody.innerHTML = html;
         }
 
         function viewBiayaDetail(id) {
-            fetch(`/keuangan/${id}`).then(r => r.json()).then(r => {
+            fetch(`{{ url('keuangan') }}/${id}`).then(r => r.json()).then(r => {
                 if (r.success) {
                     const d = r.data;
                     document.getElementById('detailBiayaContent').innerHTML =
-                        `<div class="grid grid-cols-2 gap-4 border-b pb-4"><div><p class="text-xs text-slate-400">Kode</p><p class="font-mono font-semibold">${d.kode_biaya}</p></div><div><p class="text-xs text-slate-400">Tanggal</p><p>${new Date(d.tanggal).toLocaleDateString('id-ID')}</p></div><div><p class="text-xs text-slate-400">Jenis</p><p class="capitalize">${d.sumber}</p></div><div><p class="text-xs text-slate-400">Kategori</p><p>${escapeHtml(d.kategori)}</p></div><div class="col-span-2"><p class="text-xs text-slate-400">Deskripsi</p><p>${escapeHtml(d.deskripsi)}</p></div><div><p class="text-xs text-slate-400">Jumlah</p><p class="text-xl font-bold text-red-600">Rp ${new Intl.NumberFormat('id-ID').format(d.jumlah)}</p></div><div><p class="text-xs text-slate-400">Referensi</p><p>${d.referensi||'-'}</p></div><div class="col-span-2"><p class="text-xs text-slate-400">Keterangan</p><p>${escapeHtml(d.keterangan)||'-'}</p></div><div><p class="text-xs text-slate-400">Dibuat oleh</p><p>${d.creator?.name||'-'}</p></div><div><p class="text-xs text-slate-400">Status</p><p><span class="bg-green-100 text-green-600 px-2 py-1 rounded-full text-xs">Disetujui</span></p></div></div>`;
+                        `<div class="grid grid-cols-2 gap-4 border-b pb-4">
+                            <div><p class="text-xs text-slate-400">Kode</p><p class="font-mono font-semibold">${escapeHtml(d.kode_biaya)}</p></div>
+                            <div><p class="text-xs text-slate-400">Tanggal</p><p>${new Date(d.tanggal).toLocaleDateString('id-ID')}</p></div>
+                            <div><p class="text-xs text-slate-400">Jenis</p><p class="capitalize">${escapeHtml(d.sumber)}</p></div>
+                            <div><p class="text-xs text-slate-400">Kategori</p><p>${escapeHtml(d.kategori)}</p></div>
+                            <div class="col-span-2"><p class="text-xs text-slate-400">Deskripsi</p><p>${escapeHtml(d.deskripsi)}</p></div>
+                            <div><p class="text-xs text-slate-400">Jumlah</p><p class="text-xl font-bold text-red-600">Rp ${new Intl.NumberFormat('id-ID').format(d.jumlah)}</p></div>
+                            <div><p class="text-xs text-slate-400">Referensi</p><p>${escapeHtml(d.referensi) || '-'}</p></div>
+                            <div class="col-span-2"><p class="text-xs text-slate-400">Keterangan</p><p>${escapeHtml(d.keterangan) || '-'}</p></div>
+                            <div><p class="text-xs text-slate-400">Dibuat oleh</p><p>${escapeHtml(d.creator?.name) || '-'}</p></div>
+                            <div><p class="text-xs text-slate-400">Status</p><p><span class="bg-green-100 text-green-600 px-2 py-1 rounded-full text-xs">Disetujui</span></p></div>
+                        </div>`;
                     document.getElementById('modalDetailBiaya').classList.remove('hidden');
                 }
             }).catch(e => console.error(e));
@@ -660,15 +703,34 @@
         function printBiayaDetail() {
             const w = window.open('', '_blank');
             w.document.write(
-                `<!DOCTYPE html><html><head><title>Detail Biaya</title><style>body{font-family:Arial;padding:20px}</style></head><body><div class="print-content">${document.getElementById('detailBiayaContent').innerHTML}</div></body></html>`
-                );
+                `<!DOCTYPE html>
+                <html>
+                <head>
+                    <title>Detail Biaya</title>
+                    <style>
+                        body{font-family:Arial,sans-serif;padding:20px}
+                        .print-content{max-width:600px;margin:0 auto}
+                        table{width:100%;border-collapse:collapse}
+                        td{padding:8px;border-bottom:1px solid #ddd}
+                        .label{font-weight:bold;width:40%}
+                    </style>
+                </head>
+                <body>
+                    <div class="print-content">
+                        <h2 style="text-align:center">Detail Biaya Operasional</h2>
+                        ${document.getElementById('detailBiayaContent').innerHTML}
+                        <p style="text-align:center;margin-top:30px;font-size:12px;color:#999">Dicetak pada: ${new Date().toLocaleString()}</p>
+                    </div>
+                </body>
+                </html>`
+            );
             w.document.close();
             w.print();
         }
 
         function deleteBiaya(id) {
             if (confirm('Yakin ingin menghapus data biaya ini?')) {
-                fetch(`/keuangan/${id}`, {
+                fetch(`{{ url('keuangan') }}/${id}`, {
                     method: 'DELETE',
                     headers: {
                         'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
@@ -685,21 +747,11 @@
             }
         }
 
-        function exportRiwayat() {
-            const s = document.getElementById('filterStartDate').value,
-                e = document.getElementById('filterEndDate').value,
-                src = document.getElementById('filterSumber').value;
-            let url = '/keuangan/export?';
-            if (s) url += `start_date=${s}&`;
-            if (e) url += `end_date=${e}&`;
-            if (src && src !== 'all') url += `sumber=${src}`;
-            window.open(url, '_blank');
-        }
-
         // Set default date filter
-        document.getElementById('filterStartDate').value = new Date(new Date().getFullYear(), new Date().getMonth(), 1)
-            .toISOString().split('T')[0];
-        document.getElementById('filterEndDate').value = new Date().toISOString().split('T')[0];
+        const today = new Date();
+        const firstDayOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
+        document.getElementById('filterStartDate').value = firstDayOfMonth.toISOString().split('T')[0];
+        document.getElementById('filterEndDate').value = today.toISOString().split('T')[0];
 
         function escapeHtml(text) {
             if (!text) return '';

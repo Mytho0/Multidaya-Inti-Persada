@@ -73,16 +73,17 @@ Route::middleware(['auth'])->group(function () {
         Route::delete('/{id}', [BarangController::class, 'destroy'])->name('destroy');
         Route::post('/{id}/stock', [BarangController::class, 'updateStock'])->name('update-stock');
     });
-
-    // ==================== KEUANGAN ROUTES ====================
-    Route::prefix('keuangan')->name('keuangan.')->group(function () {
-        Route::get('/', [KeuanganController::class, 'index'])->name('index');
-        Route::post('/', [KeuanganController::class, 'store'])->name('store');
-        Route::delete('/{id}', [KeuanganController::class, 'destroy'])->name('destroy');
-        Route::get('/{id}', [KeuanganController::class, 'show'])->name('show');
-        Route::get('/riwayat-json', [KeuanganController::class, 'getRiwayatByDate'])->name('riwayat.json');
-        Route::get('/export', [KeuanganController::class, 'export'])->name('export');
-        Route::get('/laporan-lab-rugi', [KeuanganController::class, 'laporanLabaRugi'])->name('laporan-lab-rugi');
+    // Keuangan Routes
+    Route::prefix('keuangan')->group(function () {
+        Route::get('/', [KeuanganController::class, 'index'])->name('keuangan.index');
+        Route::get('/laba', [KeuanganController::class, 'laba'])->name('keuangan.laba');
+        Route::get('/pendapatan', [KeuanganController::class, 'pendapatan'])->name('keuangan.pendapatan');
+        Route::get('/pengeluaran', [KeuanganController::class, 'pengeluaran'])->name('keuangan.pengeluaran');
+        Route::get('/laporan-laba-rugi', [KeuanganController::class, 'laporanLabaRugi'])->name('keuangan.laporan-laba-rugi');
+        Route::get('/riwayat-json', [KeuanganController::class, 'riwayatJson'])->name('keuangan.riwayat-json');
+        Route::post('/', [KeuanganController::class, 'store'])->name('keuangan.store');
+        Route::get('/{id}', [KeuanganController::class, 'show'])->name('keuangan.show');
+        Route::delete('/{id}', [KeuanganController::class, 'destroy'])->name('keuangan.destroy');
     });
 
     // ==================== API ROUTES ====================
@@ -134,10 +135,10 @@ Route::middleware(['auth'])->group(function () {
 
     // ==================== PROMO ROUTES ====================
     Route::middleware(['auth'])->group(function () {
-    Route::post('/promo', [PromoController::class, 'store'])->name('promo.store');
-    Route::get('/promo', [PromoController::class, 'index'])->name('promo.index');
-    Route::get('/promo/aktif/{barangId}', [PromoController::class, 'getPromoAktif'])->name('promo.aktif');
-    Route::post('/promo/check-status', [PromoController::class, 'checkAndUpdateStatus'])->name('promo.check');
+        Route::post('/promo', [PromoController::class, 'store'])->name('promo.store');
+        Route::get('/promo', [PromoController::class, 'index'])->name('promo.index');
+        Route::get('/promo/aktif/{barangId}', [PromoController::class, 'getPromoAktif'])->name('promo.aktif');
+        Route::post('/promo/check-status', [PromoController::class, 'checkAndUpdateStatus'])->name('promo.check');
     });
 });
 
