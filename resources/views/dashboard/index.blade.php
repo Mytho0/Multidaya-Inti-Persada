@@ -202,8 +202,6 @@
                     </div>
                     <i class="fas fa-lightbulb text-sm group-hover:rotate-12 transition-transform duration-300"></i>
                     <span class="text-sm font-black uppercase tracking-wider">Rekomendasi AI</span>
-                    <span id="rekomendasiBadgeCount"
-                        class="absolute -top-1 -right-1 bg-red-500 text-white text-[9px] font-black rounded-full w-4 h-4 flex items-center justify-center hidden">0</span>
                 </button>
             </div>
         </div>
