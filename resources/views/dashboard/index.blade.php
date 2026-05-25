@@ -165,7 +165,7 @@
                                 {{-- Menampilkan invoice dan nomor telepon --}}
                                 <div class="flex items-center justify-between flex-wrap gap-1">
                                     <p class="text-slate-900 font-black text-[11px]">
-                                        {{ $item->invoice ?? ($item->customer ?? '-') }}
+                                        {{ $item->nama_penyewa ?? ($item->customer ?? '-') }}
                                     </p>
                                     <div class="flex items-center gap-1">
                                         <i class="fas fa-phone-alt text-[9px] text-gray-500"></i>
